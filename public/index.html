@@ -1,0 +1,167 @@
+<html>
+<head>
+  <title>Pilot Latency 2</title>
+
+  <!-- Add Firebase SDKs (software dev kit) from the CDN (content delivery network) -->
+  <!-- (in the <head> tag of your page, before other script tags)  -->
+  <!-- Do a partial import of products you need -->
+  <!-- Firebase core is always required and must be first -->
+  <script src="/__/firebase/5.9.4/firebase-app.js"></script>
+  <!-- Add additional services that you want to use -->
+  <!-- Firebase Realtime Database -->
+  <script src="/__/firebase/5.9.4/firebase-database.js"></script>
+  <!-- Initialize Firebase -->
+  <script src="/__/firebase/init.js"></script>
+
+  <!-- Include the [jQuery library](http://jquery.com/), which helps you manipulate HTML elements from JS. -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+  <!-- Include my library, [mmturkey][mmturkey], which manages submitting data to Mechanical Turk. This defines a global object, <code>turk</code>, and attaches five properties to it, <code>hitId</code>, <code>assignmentId</code>, <code>workerId</code>, <code>previewMode</code>, and <code>turkSubmitTo</code>. It also provides a single method, <code>submit(data)</code>, which you use to submit data to Turk. If no submission URL has been provided (because, e.g. you're testing your code outside of the Turk environment), <code>submit</code> displays what would have been submitted (without, obviously, any Turk-specific variables like <code>workerId</code> and <code>assignmentId</code>).  -->
+  <!-- [mmturkey]: http://github.com/longouyang/mmturkey -->
+  <script src="mmturkey-0.6.js"></script>
+
+  <!-- Include the cascading style sheet (CSS), which lets us separate style from content. This stylesheet is important because it defines the notion of a **slide** and also makes things look nicer, which subjects appreciate. It's worth looking at the [source code](style.html). -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+<!-- The instructions slide. -->
+<div class="slide" id="instructions">
+  <div style="width: 500px; margin: 0 auto; text-align: center; background-color: #8C1516; padding: 20px 15px 10px 10px">
+    <img src="images/stanford.png" height="46" width="360" alt="Stanford University">
+  </div>
+  <p id='logo-text'>Stanford AAA Lab</p>
+  <div class="block-text">
+  <p> In the following activity, you will proceed through 3 stages:
+    <ol>
+      <li>First, you will see 24 Swahili words paired with their English translations.</li>
+      <li>Then, you will be asked to study the 24 Swahili-English word pairs. The word pairs will be split into three sets of eight. You will be asked to use a different study strategy for each set.</li>
+      <li>Finally, you will be quizzed on all 24 Swahili-English word pairs. On the quiz, you will be given the Swahili word, and asked to type the English translation.</li>
+    </ol>
+    You will be reminded of these instructions along the way.
+  </p>
+  </div>
+  <!-- Button to start the experiment. <code>this.blur()</code> removes the focus from the button, if the user pressed the button by using the keyboard, rather than the mouse. -->
+  <!-- <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button> -->
+  <button type="button" onclick="this.blur(); experiment.assessmentStudyFraming();">Start</button>
+  <button type="button" onclick="this.blur(); experiment.end();">End</button>
+  <!-- <button type="button" onclick="this.blur(); experiment.assessmentChoiceFraming();">Start</button> -->
+  <!-- Legal blurb that we're required to show. -->
+  <!-- <p class="block-text" id="legal">Legal information: By answering the following questions, you are participating in a study being performed by researchers in the Stanford School of Education. If you have questions about this research, please contact Katie Cheng at <a href="mailto://katiemc@stanford.edu">katiemc@stanford.edu</a>. You must be at least 18 years old to participate. Your participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p> -->
+</div>
+
+<!-- The generic slide for text instructions with a Next button. -->
+<div class="slide" id="textNext">
+  <div style="width: 500px; margin: 0 auto;">
+    <h1 id="instructionsHeader">{{}}</h1>
+  </div>
+  <p class="block-text" id="instructionsText">{{}}</p>
+  <div style="text-align: center">
+    <button type="button" id="nextButton">Next</button>
+  </div>
+</div>
+
+<!-- The study slide -->
+<div class="slide" id="study">
+  <div style="text-align: center">
+    <h1 class="wordpair" id="wordpair">{{}}</h1>
+  </div>
+</div>
+
+<!-- The generate slide -->
+<div class="slide" id="generate">
+  <div style="text-align: center">
+    <form id="generatedForm" name="generatedForm" autocomplete="off" 
+      onkeypress="return event.keyCode != 13;">
+      <h1 class="wordpair" style="display: inline-block" id="swahili" name="swahili">{{}}</h1>
+      <input style="margin-left: 10px" id="generatedWord" name="generatedWord">
+    </form>
+    <h1 hidden class="wordpair" id="feedback">{{}}</h1>
+  </div>
+</div>
+
+<!-- The restudy slide -->
+<div class="slide" id="restudy">
+  <div style="text-align: center">
+    <h1 class="wordpair" id="restudyWordpair">{{}}</h1>
+    <form id="restudiedForm" name="restudiedForm" autocomplete="off" 
+      onkeypress="return event.keyCode != 13;">
+      <h1 class="wordpair" style="display: inline-block" id="restudySwahili" name="restudySwahili">{{}}</h1>
+      <input style="margin-left: 10px" id="restudiedWord" name="restudiedWord">
+    </form>
+  </div>
+</div>
+
+<!-- The prediction slide with a Next button. -->
+<div class="slide" id="predictNext">
+  <div style="width: 500px; margin: 0 auto;">
+    <h1>Predict: How much did you learn?</h1>
+    <form id="predictionForm" name="predictionForm" autocomplete="off"
+      onkeypress="return event.keyCode != 13;">
+      <p id="firstPredictionText" class="block-text">{{}}</p>
+      <input id="firstPrediction" name="firstPrediction" type="number" min="0" max="10" required>
+      <p style="display:inline"> / 10</p>
+      <br><br>
+      <p id="secondPredictionText" class="block-text">{{}}</p>
+      <input id="secondPrediction" name="secondPrediction" type="number" min="0" max="10" required>
+      <p style="display:inline"> / 10</p>
+      <br><br>
+      <p class="block-text">What did you consider when making your predictions?</p>
+      <textarea id="explainPrediction" name="explainPrediction" rows="5" style="width: 500px"></textarea>
+      <div style="text-align: center">
+        <button type="submit" id="predictNextButton">Next</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- The feedback slide with a Next button. -->
+<div class="slide" id="feedbackNext">
+  <div style="width: 500px; margin: 0 auto;">
+    <h1 id="feedbackHeader">Quiz Results</h1>
+  </div>
+  <p class="block-text" id="feedbackText">{{}}</p>
+  <div style="text-align: center">
+    <button type="button" id="feedbackNextButton">Next</button>
+  </div>
+</div>
+
+<!-- The choice slide with See Translation button. -->
+<div class="slide" id="choiceSeeTranslation">
+  <div style="text-align: center">
+    <h1 class="wordpair" id="swahiliCue" style="display:inline-block">{{}}</h1>
+    <h1 class="wordpair" id="englishAnswer" style="display:inline-block">{{}}</h1>
+    <br>
+    <div style="text-align: center">
+      <button type="button" id="seeTranslation">See Translation</button>
+    </div>
+  </div>
+</div>
+
+<!-- The choice slide with See Translation button. -->
+<div class="slide" id="choiceNextWordPair">
+  <div style="text-align: center">
+    <h1 class="wordpair" id="swahiliCue2" style="display:inline-block">{{}}</h1>
+    <h1 class="wordpair" id="englishAnswer2" style="display:inline-block">{{}}</h1>
+    <br>
+    <div style="text-align: center">
+      <button type="button" id="nextWordPair">Move On</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- The finish slide. -->
+<div class="slide" id="end">
+  Thank you very much for your participation in this study! Please copy and email this data to katiemc@stanford.edu with the subject line "Pilot Data".
+</div>
+
+<!-- Include the JavaScript file for the experiment. As written, that script immediately executes commands, so we include it here at the end of the HTML file to ensure that resources referenced by the script actually exist. For instance, one of the immediately executed commands is <code>showSlide("instructions")</code>. If we loaded experiment.js, say, in the <code>head</code> section, <code>showSlide("instructions")</code> would fail because the <code>instructions</code> slide doesn't exist yet. It is possible to load the script in <code>head</code> but you have to ensure that any immediately executed commands, if they rely on potentially uninitialized HTML elements, are _delayed_ until the page is ready, using either [window.onload][onload] or jQuery's more robust [$(document).ready()][domReady]  -->
+<!-- [onload]: https://developer.mozilla.org/en/DOM/window.onload -->
+<!-- [domReady]: http://api.jquery.com/ready/ -->
+<script src="experiment.js"></script>
+
+</body>
+</html>
