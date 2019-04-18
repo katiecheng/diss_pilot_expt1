@@ -82,37 +82,61 @@ function updateUserEndDateTime(prolificId, endDateTime) {
 }
 
 // When you start a new session, create all items, with all the columns that will have to be populated
-function createNewItem(prolificId, studyOrder) {
-  db.ref('items/' + prolificId + "_" + studyOrder).set({
+function createNewItem(prolificId, itemIndex) {
+  db.ref('items/' + prolificId + "_" + itemIndex).set({
     prolificId: prolificId,
-    studyOrder: studyOrder,
-    itemIndex: "",
+    itemIndex: itemIndex,
+    studyOrder: "",
     strategyOrder: "",
+    strategy: "",
     revealLatency: "",
     moveOnLatency: "",
     testOrder: "",
-    testAccuracy: ""
+    testAccuracy: "",
+    userInput: ""
   });
 }
 
-function updateItemStudyData(prolificId, studyOrder, itemIndex){
-  db.ref('items/' + prolificId + "_" + studyOrder).update({
-    itemIndex: itemIndex
+function updateItemStudyData(prolificId, itemIndex, studyOrder){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
+    studyOrder: studyOrder
   });
 }
 
-function updateItemStrategyData(prolificId, studyOrder, strategyOrder, revealLatency, moveOnLatency){
-  db.ref('items/' + prolificId + "_" + studyOrder).update({
-    strategyOrder: strategyOrder,
+function updateItemStrategyData(prolificId, itemIndex, strategyOrder){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
+    strategyOrder: strategyOrder
+  });
+}
+
+function updateItemStrategyTypeData(prolificId, itemIndex, strategy){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
+    strategy: strategy
+  });
+}
+
+function updateItemStrategyRevealData(prolificId, itemIndex, revealLatency){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
     revealLatency: revealLatency,
+  });
+}
+
+function updateItemStrategyMoveOnData(prolificId, itemIndex, moveOnLatency){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
     moveOnLatency: moveOnLatency
   });
 }
 
-function updateItemTestData(prolificId, studyOrder, testOrder, testAccuracy){
-  db.ref('items/' + prolificId + "_" + studyOrder).update({
-    testOrder: testOrder,
-    testAccuracy: testAccuracy
+function updateItemTestData(prolificId, itemIndex, testOrder){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
+    testOrder: testOrder
+  });
+}
+
+function updateItemTestAccuracyData(prolificId, itemIndex, testAccuracy, userInput){
+  db.ref('items/' + prolificId + "_" + itemIndex).update({
+    testAccuracy: testAccuracy,
+    userInput: userInput
   });
 }
 
@@ -133,7 +157,7 @@ var numTrials = 40,
   // assessmentTrials = [],
   /* test intervention with last numTrials items */
   /* test intervention with the first 24 items */
-  myTrialOrder = shuffle([...Array(40).keys()].slice(0,24)),
+  myTrialOrder = shuffle([...Array(40).keys()].slice(0,3)),
   interventionTrials = [],
   assessmentTrials = myTrialOrder.slice(0),
   /* full intervention with all 40 */
@@ -245,8 +269,8 @@ var experiment = {
       experiment.prolificId = $("#prolificId").val();
       var startDateTime = new Date();
       createNewUser(experiment.prolificId, startDateTime);
-      for (i=1; i<experiment.numTrials+1; i++) {
-        createNewItem(experiment.prolificId, i);
+      for (i=0; i<experiment.myTrialOrder.length; i++) {
+        createNewItem(experiment.prolificId, experiment.myTrialOrder[i]);
       }
       showSlide("instructions");
     }
@@ -422,7 +446,8 @@ var experiment = {
       experiment.test(exptPhase);
       experiment.interventionTestData.push(data);
     } else if (exptPhase == "assessmentTest"){
-      experiment.assessmentData.testAccuracy[currItem] = accuracy;
+      //experiment.assessmentData.testAccuracy[currItem] = accuracy;
+      updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
       experiment.test(exptPhase);
       experiment.assessmentTestData.push(data);
     }
@@ -508,7 +533,8 @@ var experiment = {
 
     if (exptPhase == "assessmentTest") {
       experiment.assessmentTestOrderCounter += 1;
-      experiment.assessmentData.testOrder[currItem] = experiment.assessmentTestOrderCounter;
+      //experiment.assessmentData.testOrder[currItem] = experiment.assessmentTestOrderCounter;
+      updateItemTestData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter);
     }
 
     showSlide("generate");
@@ -573,7 +599,8 @@ var experiment = {
       english = swahili_english_pairs[currItem][1];
 
     experiment.assessmentStudyOrderCounter += 1;
-    experiment.assessmentData.studyOrder[currItem] = experiment.assessmentStudyOrderCounter;
+    //experiment.assessmentData.studyOrder[currItem] = experiment.assessmentStudyOrderCounter;
+    updateItemStudyData(experiment.prolificId, currItem, experiment.assessmentStudyOrderCounter);
 
     showSlide("study");
     $("#wordpair").text(swahili + " : " + english);
@@ -617,12 +644,15 @@ var experiment = {
       var strategyAbbrev = "G";
     }
 
-    experiment.assessmentData.strategy[currItem] = strategyAbbrev;
+    //experiment.assessmentData.strategy[currItem] = strategyAbbrev;
+    updateItemStrategyTypeData(experiment.prolificId, currItem, strategyAbbrev);
 
     if (exptPhase == "assessmentStrategyLatencyReveal"){
-      experiment.assessmentData.revealLatency[currItem] = latency;
+      //experiment.assessmentData.revealLatency[currItem] = latency;
+      updateItemStrategyRevealData(experiment.prolificId, currItem, latency);
     } else if (exptPhase == "assessmentStrategyLatencyMoveOn"){
-      experiment.assessmentData.moveOnLatency[currItem] = latency;
+      //experiment.assessmentData.moveOnLatency[currItem] = latency;
+      updateItemStrategyMoveOnData(experiment.prolificId, currItem, latency);
     }
     
     experiment.assessmentStrategyData.push(data);
@@ -685,7 +715,8 @@ var experiment = {
       english = swahili_english_pairs[currItem][1];
 
     experiment.assessmentStrategyOrderCounter += 1;
-    experiment.assessmentData.strategyOrder[currItem] = experiment.assessmentStrategyOrderCounter;
+    //experiment.assessmentData.strategyOrder[currItem] = experiment.assessmentStrategyOrderCounter;
+    updateItemStrategyData(experiment.prolificId, currItem, experiment.assessmentStrategyOrderCounter);
 
     if (stratType == "assessmentChoice") {
       experiment.assessmentChoiceTrialsSave.push(currItem);
@@ -783,23 +814,3 @@ var experiment = {
     }, 1500);
   }
 }
-
-
-
-// var userData = {
-//     "startTime": "0",
-//     "endTime": "10000", 
-//     "feedback" : "I love this study!"
-// }
-
-// var itemData = {
-//     "prolificId": "24charstr",
-//     "itemIndex": "7",
-//     "studyOrder": "4",
-//     "strategyOrder": "5",
-//     "strategy": "C",
-//     "revealLatency": "4758",
-//     "moveOnLatency": "5000",
-//     "testOrder": "17",
-//     "testAccuracy": "0"
-// }
