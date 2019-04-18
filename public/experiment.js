@@ -2,6 +2,7 @@
 /*
 TODO
 Once I'm done testing
+- Add feedback collection
 - check for duplicate prolificIds, so it doesn't overwrite data in database
 - add database rules! If I include a path in my prolific id, I can overwrite data
 - add 5 little dots that countdown so people know it's working?
@@ -244,16 +245,6 @@ var experiment = {
   predictionGenerate: -1,
   interventionRestudyTestScore: 0,
   interventionGenerateTestScore: 0,
-  assessmentData: {
-    itemIndex: [...Array(24).keys()],
-    studyOrder: Array(24).fill(0),
-    strategyOrder: Array(24).fill(0),
-    strategy: Array(24).fill(""),
-    revealLatency: Array(24).fill(0),
-    moveOnLatency: Array(24).fill(0),
-    testOrder: Array(24).fill(0),
-    testAccuracy: Array(24).fill(0)
-  },
   assessmentStudyOrderCounter: 0,
   assessmentStrategyOrderCounter: 0,
   assessmentTestOrderCounter: 0,
@@ -446,7 +437,6 @@ var experiment = {
       experiment.test(exptPhase);
       experiment.interventionTestData.push(data);
     } else if (exptPhase == "assessmentTest"){
-      //experiment.assessmentData.testAccuracy[currItem] = accuracy;
       updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
       experiment.test(exptPhase);
       experiment.assessmentTestData.push(data);
@@ -533,7 +523,6 @@ var experiment = {
 
     if (exptPhase == "assessmentTest") {
       experiment.assessmentTestOrderCounter += 1;
-      //experiment.assessmentData.testOrder[currItem] = experiment.assessmentTestOrderCounter;
       updateItemTestData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter);
     }
 
@@ -599,7 +588,6 @@ var experiment = {
       english = swahili_english_pairs[currItem][1];
 
     experiment.assessmentStudyOrderCounter += 1;
-    //experiment.assessmentData.studyOrder[currItem] = experiment.assessmentStudyOrderCounter;
     updateItemStudyData(experiment.prolificId, currItem, experiment.assessmentStudyOrderCounter);
 
     showSlide("study");
@@ -625,17 +613,6 @@ var experiment = {
   /* capture latency data */
   captureTime: function(exptPhase, strategy, currItem, swahili, english, startTime, endTime){
     var latency = endTime - startTime;
-    data = {
-      exptPhase: exptPhase,
-      strategy: strategy,
-      item: currItem,
-      swahili: swahili,
-      english: english,
-      startTime: startTime,
-      endTime: endTime,
-      latency: latency
-    };
-
     if (strategy =="assessmentChoice") {
       var strategyAbbrev = "C";
     } else if (strategy == "assessmentRestudy") {
@@ -644,18 +621,13 @@ var experiment = {
       var strategyAbbrev = "G";
     }
 
-    //experiment.assessmentData.strategy[currItem] = strategyAbbrev;
     updateItemStrategyTypeData(experiment.prolificId, currItem, strategyAbbrev);
 
     if (exptPhase == "assessmentStrategyLatencyReveal"){
-      //experiment.assessmentData.revealLatency[currItem] = latency;
       updateItemStrategyRevealData(experiment.prolificId, currItem, latency);
     } else if (exptPhase == "assessmentStrategyLatencyMoveOn"){
-      //experiment.assessmentData.moveOnLatency[currItem] = latency;
       updateItemStrategyMoveOnData(experiment.prolificId, currItem, latency);
     }
-    
-    experiment.assessmentStrategyData.push(data);
   },
 
   /*Then, you will have 5 seconds to study each pair using whatever method you would like. */
@@ -796,21 +768,5 @@ var experiment = {
     // Show the finish slide.
     showSlide("end");
     // Wait 1.5 seconds and then execute function
-    setTimeout(function() { 
-      // turk.submit(experiment);
-      writeUserData("prolificId2", "startTime", "endTime", "feedback")
-      writeItemData("prolificId2", "itemIndex")
-      updateItemStudyData("prolificId2", "itemIndex", "studyOrder")
-      updateItemStrategyData("prolificId2", "itemIndex", "strategyOrder", "revealLatency", "moveOnLatency")
-      updateItemTestData("prolificId2", "itemIndex", "testOrder", "testAccuracy")
-      var form = document.createElement(form);
-      document.body.appendChild(form);
-      // addFormData(form, "data", JSON.stringify(experiment));
-      // submit the form
-      // form.action = turk.turkSubmitTo + "/mturk/externalSubmit";
-      // form.method = "POST";
-      // form.submit();
-
-    }, 1500);
   }
 }
