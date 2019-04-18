@@ -2,12 +2,15 @@
 /*
 TODO
 Once I'm done testing
-- collect start/end times for duration
-- collect individual word accuracy data during study and test
-- update conditions!
+- check for duplicate prolificIds, so it doesn't overwrite data in database
+- add database rules! If I include a path in my prolific id, I can overwrite data
 - add 5 little dots that countdown so people know it's working?
 - progress bar for each round of 20 words
 - giving credit for plural
+- clean up this file...
+- collect start/end times for duration
+- collect individual word accuracy data during study and test
+- update conditions!
 - change the trial order to be experiment specific?
 - decide trial duration (study vs. strategy vs. test)
 */
@@ -15,17 +18,12 @@ Once I'm done testing
 // access and get a reference to the Firebase database service
 var db = firebase.database();
 
-
-
-
 // ## Helper functions
 
-// Shows slides. We're using jQuery here - the **$** is the jQuery selector function, which takes as input either a DOM element or a CSS selector string.
+// Shows slides. 
 function showSlide(id) {
-  // Hide all slides
-    $(".slide").hide();
-    // Show just the slide we want to show
-    $("#"+id).show();
+    $(".slide").hide(); // Hide all slides
+    $("#"+id).show();   // Show just the slide we want to show
 }
 
 // Get a random integer less than n.
@@ -36,57 +34,83 @@ function randomInteger(n) {
 // Fisher-Yates (aka Knuth) Shuffle (https://github.com/coolaj86/knuth-shuffle)
 function shuffle(array) {
   var currentIndex = array.length, temporaryValue, randomIndex;
-
   // While there remain elements to shuffle...
   while (currentIndex > 0) {
-
     // Pick a remaining element...
     randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex --;
-
     // And swap it with the current element.
     temporaryValue = array[currentIndex];
     array[currentIndex] = array[randomIndex];
     array[randomIndex] = temporaryValue;
   }
-
   return array;
 }
 
-// Interact with database
+function validateProlificId() {
+  var prolificId = $("#prolificId").val();
+  if (prolificId == "") {
+    alert("Prolific ID must be filled out");
+    return false;
+  } else {
+    return true;
+  }
+}
 
-function writeUserData(prolificId, startTime, endTime, feedback) {
+// ## Interact with database
+
+// Create a new user, with all columns that will have to be populated
+function createNewUser(prolificId, startDateTime) {
   db.ref('users/' + prolificId).set({
     prolificId: prolificId,
-    startTime: startTime,
-    endTime: endTime, 
+    startDateTime: startDateTime.toISOString(),
+    endDateTime: "", 
+    feedback : ""
+  });
+}
+
+function updateUserFeedback(prolificId, feedback) {
+  db.ref('users/' + prolificId).update({
     feedback : feedback
   });
 }
 
-function writeItemData(prolificId, itemIndex) {
-  db.ref('items/' + prolificId + "_" + itemIndex).set({
+function updateUserEndDateTime(prolificId, endDateTime) {
+  db.ref('users/' + prolificId).update({
+    endDateTime : endDateTime.toISOString()
+  });
+}
+
+// When you start a new session, create all items, with all the columns that will have to be populated
+function createNewItem(prolificId, studyOrder) {
+  db.ref('items/' + prolificId + "_" + studyOrder).set({
     prolificId: prolificId,
+    studyOrder: studyOrder,
+    itemIndex: "",
+    strategyOrder: "",
+    revealLatency: "",
+    moveOnLatency: "",
+    testOrder: "",
+    testAccuracy: ""
+  });
+}
+
+function updateItemStudyData(prolificId, studyOrder, itemIndex){
+  db.ref('items/' + prolificId + "_" + studyOrder).update({
     itemIndex: itemIndex
   });
 }
 
-function updateItemStudyData(prolificId, itemIndex, studyOrder){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
-    studyOrder: studyOrder
-  });
-}
-
-function updateItemStrategyData(prolificId, itemIndex, strategyOrder, revealLatency, moveOnLatency){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
+function updateItemStrategyData(prolificId, studyOrder, strategyOrder, revealLatency, moveOnLatency){
+  db.ref('items/' + prolificId + "_" + studyOrder).update({
     strategyOrder: strategyOrder,
     revealLatency: revealLatency,
     moveOnLatency: moveOnLatency
   });
 }
 
-function updateItemTestData(prolificId, itemIndex, testOrder, testAccuracy){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
+function updateItemTestData(prolificId, studyOrder, testOrder, testAccuracy){
+  db.ref('items/' + prolificId + "_" + studyOrder).update({
     testOrder: testOrder,
     testAccuracy: testAccuracy
   });
@@ -108,6 +132,7 @@ var numTrials = 40,
   // interventionTrials = myTrialOrder.slice(0),
   // assessmentTrials = [],
   /* test intervention with last numTrials items */
+  /* test intervention with the first 24 items */
   myTrialOrder = shuffle([...Array(40).keys()].slice(0,24)),
   interventionTrials = [],
   assessmentTrials = myTrialOrder.slice(0),
@@ -158,29 +183,12 @@ var numTrials = 40,
   ];
 
 // Show the instructions slide -- this is what we want subjects to see first.
-showSlide("instructions");
+showSlide("getProlificId");
 
 // ## The main event
 /* I implement the sequence as an object with properties and methods. The benefit of encapsulating everything in an object is that it's conceptually coherent (i.e. the <code>data</code> variable belongs to this particular sequence and not any other) and allows you to **compose** sequences to build more complicated experiments. For instance, if you wanted an experiment with, say, a survey, a reaction time test, and a memory test presented in a number of different orders, you could easily do so by creating three separate sequences and dynamically setting the <code>end()</code> function for each sequence so that it points to the next. **More practically, you should stick everything in an object and submit that whole object so that you don't lose data (e.g. randomization parameters, what condition the subject is in, etc). Don't worry about the fact that some of the object properties are functions -- mmturkey (the Turk submission library) will strip these out.*/
-var userData = {
-    "startTime": "0",
-    "endTime": "10000", 
-    "feedback" : "I love this study!"
-}
-
-var itemData = {
-    "prolificId": "24charstr",
-    "itemIndex": "7",
-    "studyOrder": "4",
-    "strategyOrder": "5",
-    "strategy": "C",
-    "revealLatency": "4758",
-    "moveOnLatency": "5000",
-    "testOrder": "17",
-    "testAccuracy": "0"
-}
-
 var experiment = {
+  prolificID: "",
   // Properties
   numTrials: numTrials,
   numStrategyRounds: numStrategyRounds,
@@ -230,6 +238,19 @@ var experiment = {
   interventionTestData: [],
   assessmentStrategyData: [],
   assessmentTestData: [],
+
+  // Instructions
+  instructions: function() {
+    if (validateProlificId()){
+      experiment.prolificId = $("#prolificId").val();
+      var startDateTime = new Date();
+      createNewUser(experiment.prolificId, startDateTime);
+      for (i=1; i<experiment.numTrials+1; i++) {
+        createNewItem(experiment.prolificId, i);
+      }
+      showSlide("instructions");
+    }
+  },
 
   //Intro to study
   interventionStudyFraming: function() { 
@@ -739,6 +760,8 @@ var experiment = {
 
   // The function that gets called when the sequence is finished.
   end: function() {
+    var endDateTime = new Date();
+    updateUserEndDateTime(experiment.prolificId, endDateTime);
     // Show the finish slide.
     showSlide("end");
     // Wait 1.5 seconds and then execute function
@@ -760,3 +783,23 @@ var experiment = {
     }, 1500);
   }
 }
+
+
+
+// var userData = {
+//     "startTime": "0",
+//     "endTime": "10000", 
+//     "feedback" : "I love this study!"
+// }
+
+// var itemData = {
+//     "prolificId": "24charstr",
+//     "itemIndex": "7",
+//     "studyOrder": "4",
+//     "strategyOrder": "5",
+//     "strategy": "C",
+//     "revealLatency": "4758",
+//     "moveOnLatency": "5000",
+//     "testOrder": "17",
+//     "testAccuracy": "0"
+// }
