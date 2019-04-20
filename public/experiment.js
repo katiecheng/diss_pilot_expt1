@@ -6,6 +6,7 @@ Once I'm done testing
 - check for duplicate prolificIds, so it doesn't overwrite data in database
 - add database rules! If I include a path in my prolific id, I can overwrite data
 - add 5 little dots that countdown so people know it's working?
+- check to see that the first item presented is really 5 seconds
 - progress bar for each round of 20 words
 - giving credit for plural
 - clean up this file...
@@ -47,6 +48,13 @@ function shuffle(array) {
   }
   return array;
 }
+
+// occluder code
+$(document).mousemove(setMousePosition);
+function setMousePosition(e) {
+  $("#occluder").css('left', event.pageX);
+  $("#occluder").css('top', event.pageY);
+}       
 
 function validateProlificId() {
   var prolificId = $("#prolificId").val();
