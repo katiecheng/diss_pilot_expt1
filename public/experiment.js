@@ -49,21 +49,23 @@ function shuffle(array) {
   return array;
 }
 
-// occluder code
-$(document).mousemove(setMousePosition);
-function setMousePosition(e) {
-  $("#occluder").css('left', event.pageX);
-  $("#occluder").css('top', event.pageY);
-}       
 
 function validateProlificId() {
   var prolificId = $("#prolificId").val();
-  if (prolificId == "") {
-    alert("Prolific ID must be filled out");
-    return false;
-  } else {
-    return true;
-  }
+  var ref = db.ref("users/");
+  ref.once("value")
+    .then(function(snapshot) { // get a snapshot of the value at "users/"
+      var prolificIdExists = snapshot.child(prolificId).exists(); // boolean
+      if (prolificId == "") {
+        alert("Prolific ID cannot be blank");
+        return false;
+      } else if (prolificIdExists) {
+        alert("Duplicate Prolific ID--if you have already participated in this experiment, you cannot participate again. If you think you are seeing this message in error, please contact the researcher.");
+        return false;
+      } else {
+        return true;
+      }
+    });
 }
 
 // ## Interact with database
