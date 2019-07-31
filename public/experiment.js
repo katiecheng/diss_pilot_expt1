@@ -52,21 +52,75 @@ function shuffle(array) {
 
 function validateProlificId() {
   var prolificId = $("#prolificId").val();
-  var ref = db.ref("users/");
-  ref.once("value")
-    .then(function(snapshot) { // get a snapshot of the value at "users/"
-      var prolificIdExists = snapshot.child(prolificId).exists(); // boolean
-      if (prolificId == "") {
-        alert("Prolific ID cannot be blank");
-        return false;
-      } else if (prolificIdExists) {
-        alert("Duplicate Prolific ID--if you have already participated in this experiment, you cannot participate again. If you think you are seeing this message in error, please contact the researcher.");
-        return false;
-      } else {
-        return true;
-      }
-    });
+  if (prolificId == "") {
+    alert("Prolific ID cannot be blank");
+    return false;
+  } else {
+    return true;
+  }
 }
+
+/*
+TODO want to check for duplicate Prolific IDs to prevent overwrites
+The fn as written doesn't work because async processing leads fn not to evaluate sequentially
+Need to implement some kind of callback
+
+// ref.child("users").orderByChild("ID").equalTo("U1EL5623").once("value",snapshot => {
+//     if (snapshot.exists()){
+//       const userData = snapshot.val();
+//       console.log("exists!", userData);
+//     }
+// });
+
+// //every user must have an email
+// firebase.database().ref(`users/${userId}/email`).once("value", snapshot => {
+//    if (snapshot.exists()){
+//       console.log("exists!");
+//       const email = snapshot.val();
+//     }
+// });
+
+function validateProlificId() {
+  var prolificId = $("#prolificId").val();
+  // var ref = db.ref("users/");
+  var ref = db.ref(`users/${prolificId}`);
+  console.log("I'm before the snapshot")
+  returnval = false;
+  ref.once("value", snapshot => {
+    if (prolificId == "") {
+      console.log("I'm in the blank")
+      alert("Prolific ID cannot be blank");
+      returnval= false;
+    } else if (snapshot.exists()){
+      console.log("I'm in the duplicate")
+      alert("Duplicate Prolific ID. If you have already participated in this experiment, you cannot participate again. If you think you are seeing this message in error, please contact the researcher.");
+      returnval= false;
+    } else {
+      console.log("I'm in the else")
+      returnval= true;
+    }
+  });
+  console.log(returnval);
+  // ref.once("value")
+  //   .then(function(snapshot) { // get a snapshot of the value at "users/"
+  //     var prolificIdExists = snapshot.child(prolificId).exists(); // boolean
+  //     if (prolificId == "") {
+  //       console.log("I'm in the blank")
+  //       alert("Prolific ID cannot be blank");
+  //       return false;
+  //     } else if (prolificIdExists) {
+  //       console.log("I'm in the duplicate")
+  //       alert("Duplicate Prolific ID. If you have already participated in this experiment, you cannot participate again. If you think you are seeing this message in error, please contact the researcher.");
+  //       return false;
+  //     } else {
+  //       console.log("I'm in the else")
+  //       return true;
+  //     }
+  //   });
+  console.log("I'm past the snapshot")
+  return returnval;
+}
+*/
 
 // ## Interact with database
 
