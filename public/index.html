@@ -42,8 +42,8 @@
 
 </div>
 
-<!-- The instructions slide. -->
-<div class="slide" id="instructions">
+<!-- The instructions slide for the latency assessment. -->
+<div class="slide" id="instructionsLatency">
   <div style="width: 500px; margin: 0 auto; text-align: center; background-color: #8C1516; padding: 20px 15px 10px 10px">
     <img src="images/stanford.png" height="46" width="360" alt="Stanford University">
   </div>
@@ -67,6 +67,33 @@
   <!-- <p class="block-text" id="legal">Legal information: By answering the following questions, you are participating in a study being performed by researchers in the Stanford School of Education. If you have questions about this research, please contact Katie Cheng at <a href="mailto://katiemc@stanford.edu">katiemc@stanford.edu</a>. You must be at least 18 years old to participate. Your participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p> -->
 </div>
 
+<!-- The instructions slide for the expt. -->
+<div class="slide" id="instructionsExpt">
+  <div style="width: 500px; margin: 0 auto; text-align: center; background-color: #8C1516; padding: 20px 15px 10px 10px">
+    <img src="images/stanford.png" height="46" width="360" alt="Stanford University">
+  </div>
+  <p id='logo-text'>Stanford AAA Lab</p>
+  <div class="block-text">
+  <p> Welcome! The following activity has two halves. In each half, you will proceed through 3 stages:
+    <ol>
+      <li>First you will see 20 Swahili words paired with their English translations.</li>
+      <li>Then you will be asked to use study strategies to study the 20 Swahili-English word pairs.</li>
+      <li>Finally you will be quizzed on the 20 Swahili-English word pairs. On the quiz, you will be given the Swahili word, and asked to type the English translation.</li>
+    </ol>
+    In the first half, you will receive guidance on what study strategies to use. In the second half, you will be free to use whatever study strategies you choose. In total, you will learn 40 Swahili words and their English translations.
+    </br></br>
+    You will be reminded of these instructions along the way. Let's get started!
+  </p>
+  </div>
+  <!-- Button to start the experiment. <code>this.blur()</code> removes the focus from the button, if the user pressed the button by using the keyboard, rather than the mouse. -->
+  <!-- <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button> -->
+  <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button>
+  <button type="button" onclick="this.blur(); experiment.end();">End</button>
+  <!-- <button type="button" onclick="this.blur(); experiment.assessmentChoiceFraming();">Start</button> -->
+  <!-- Legal blurb that we're required to show. -->
+  <p class="block-text" id="legal">Legal information: By answering the following questions, you are participating in a study being performed by researchers in the Stanford School of Education. If you have questions about this research, please contact Katie Cheng at <a href="mailto://katiemc@stanford.edu">katiemc@stanford.edu</a>. You must be at least 18 years old to participate. Your participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p>
+</div>
+
 <!-- The generic slide for text instructions with a Next button. -->
 <div class="slide" id="textNext">
   <div style="width: 500px; margin: 0 auto;">
@@ -86,7 +113,7 @@
 </div>
 
 <!-- The occulder -->
-<div id="occluder" class="occluder"></div>
+<!-- <div id="occluder" class="occluder"></div> -->
 
 <!-- The generate slide -->
 <div class="slide" id="generate">

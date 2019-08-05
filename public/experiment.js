@@ -206,28 +206,31 @@ function updateItemTestAccuracyData(prolificId, itemIndex, testAccuracy, userInp
 }
 
 // ## Configuration settings
-var numTrials = 40,
+var numTrials = 4,
+  /* test intervention with first numTrials items, in case need to re-test people */
+  // numTrials = 20, // testing
   trialDuration = 5000,
   feedbackDuration = 2000, 
   bgcolor = "white",
-  //toggle test 1 or 2 strategy rounds
+  /* toggle test 1 or 2 strategy rounds */
   numStrategyRounds = 1;
+  /* toggle number of conditions */
   // condition = randomInteger(4), // 2x2
   // condition = randomInteger(2), // expt vs. control
-  condition = 2,
-  /* test intervention with first numTrials items, in case need to re-test people*/
-  // numTrials = 20, // testing
-  // myTrialOrder = shuffle([...Array(numTrials).keys()]),
+  condition = 2, // fixed to expt?
+  myTrialOrder = shuffle([...Array(numTrials).keys()]),
+  /* toggle intervention/assessment trials to test intervention */
   // interventionTrials = myTrialOrder.slice(0),
   // assessmentTrials = [],
+  /* toggle intervention/assessment trials to test assessment */
+  // interventionTrials = [],
+  // assessmentTrials = myTrialOrder.slice(0),
   /* test intervention with last numTrials items */
-  /* test intervention with the first 24 items */
-  myTrialOrder = shuffle([...Array(40).keys()].slice(0,3)),
-  interventionTrials = [],
-  assessmentTrials = myTrialOrder.slice(0),
+  /* test intervention with the first (slice) items */
+  // myTrialOrder = shuffle([...Array(40).keys()].slice(0,3)),
   /* full intervention with all 40 */
-  // interventionTrials = myTrialOrder.slice(0,(numTrials/2)),
-  // assessmentTrials = myTrialOrder.slice((numTrials/2), numTrials),
+  interventionTrials = myTrialOrder.slice(0,(numTrials/2)),
+  assessmentTrials = myTrialOrder.slice((numTrials/2), numTrials),
   swahili_english_pairs = [
     ["adhama", "honor"],
     ["adui", "enemy"],
@@ -295,12 +298,15 @@ var experiment = {
   // assessmentTrials is the second half of myTrialOrder
   assessmentStudyTrials: shuffle(assessmentTrials.slice(0)),
   // assessmentStrategyTrials: assessmentTrials.slice(0),
-  assessmentChoiceTrials: assessmentTrials.slice(0,assessmentTrials.length/3),
-  assessmentRestudyTrials: assessmentTrials.slice(assessmentTrials.length/3,(assessmentTrials.length/3*2)),
-  assessmentGenerateTrials: assessmentTrials.slice((assessmentTrials.length/3*2), assessmentTrials.length),
+  // TOGGLE for pilot latency vs. assessment
+  assessmentChoiceTrials: shuffle(assessmentTrials.slice(0)),
   assessmentChoiceTrialsSave: [],
-  assessmentRestudyTrialsSave: [],
-  assessmentGenerateTrialsSave: [],
+  // assessmentChoiceTrials: assessmentTrials.slice(0,assessmentTrials.length/3),
+  // assessmentRestudyTrials: assessmentTrials.slice(assessmentTrials.length/3,(assessmentTrials.length/3*2)),
+  // assessmentGenerateTrials: assessmentTrials.slice((assessmentTrials.length/3*2), assessmentTrials.length),
+  // assessmentChoiceTrialsSave: [],
+  // assessmentRestudyTrialsSave: [],
+  // assessmentGenerateTrialsSave: [],
   assessmentTestTrials: shuffle(assessmentTrials.slice(0)),
   // aggregate scores and outcomes
   interventionRestudyStrategyScore: Array(numStrategyRounds).fill(0),
@@ -327,7 +333,9 @@ var experiment = {
       for (i=0; i<experiment.myTrialOrder.length; i++) {
         createNewItem(experiment.prolificId, experiment.myTrialOrder[i]);
       }
-      showSlide("instructions");
+      /* toggle instructions slide */
+      // showSlide("instructionsLatency");
+      showSlide("instructionsExpt");
     }
   },
 
@@ -338,7 +346,8 @@ var experiment = {
     their English translations. You will see each Swahili-English word pair \
     for 5 seconds, and then the screen will automatically advance to the \
     next pair. Please pay attention, and study each pair so you can type \
-    the English translation given the Swahili word.";
+    the English translation given the Swahili word.\
+    <br><br>Please make sure you understand these instructions before you begin.";
     showSlide("textNext");
     $("#instructionsHeader").text(header);
     $("#instructionsText").text(text);
@@ -365,7 +374,9 @@ var experiment = {
   //Intro to strategy
   interventionStrategyFraming: function(round) {
     if (round == 1) {
-      var header = "Study - Round 1";
+      /* Toggle for one or two strategy rounds */
+      var header = "Study Strategies";
+      // var header = "Study - Round 1";
       var text = "Now you will be asked to study each Swahili-English word pair either by (1) \
                 reviewing the English translation by copying it into the textbox, or (2) trying to \
                 recall the English translation from memory. After 5 seconds, \
@@ -373,7 +384,7 @@ var experiment = {
                 try to recall the translation from memory, you will get to see the correct answer. If you were \
                 correct, the answer will be green, if incorrect, the answer will be red.";
     } else if (round == 2) {
-      var header = "Study - Round 2";
+      var header = "Study Strategies - Round 2";
       var text = "Now, you will be asked to study each Swahili-English word pair again, \
                 either by (1) \
                 reviewing the English translation by copying it into the textbox, or (2) trying to \
@@ -427,7 +438,8 @@ var experiment = {
       $("#restudiedWord").val('');
       $("#restudiedWord").focus();
       setTimeout(function(){
-        $("#generatedForm").submit(experiment.captureWord("interventionStrategy", round, currItem, swahili, english));
+        //changed this to restudiedForm...I think the previous was a typo. check this.
+        $("#restudiedForm").submit(experiment.captureWord("interventionStrategy", round, currItem, swahili, english));
       }, trialDuration); 
     }
   },
@@ -548,8 +560,8 @@ var experiment = {
   capturePrediction: function(firstPrediction, secondPrediction) {
     experiment.predictionRestudy = firstPrediction;
     experiment.predictionGenerate = secondPrediction;
-    // experiment.interventionTestFraming();
-    experiment.end();
+    experiment.interventionTestFraming();
+    // experiment.end();
     return false;
   },
 
@@ -619,14 +631,28 @@ var experiment = {
     showSlide("feedbackNext");
     $("#feedbackText").html(text);
     // TOGGLE THIS TO GO TO ASSESSMENT/END
-    $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentStudyFraming()});
+    $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentFraming()});
     // $("#feedbackNextButton").click(function(){$(this).blur(); experiment.end()});
   },
 
+  assessmentFraming: function() {
+    var header = "Second half";
+    var text = "Congrats! You have completed the first half of the activity. \
+    Now, you will learn the second set of 20 Swahili-English word pairs. \
+    You will go through the same 3 stages of (1) seeing the word pairs, \
+    (2) applying study strategies, and (3) taking a short quiz. <br><br>\
+    This time, you will be free to apply whatever study strategies you choose.";
+    showSlide("textNext");
+    $("#instructionsHeader").text(header);
+    $("#instructionsText").html(text);
+    $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudyFraming();});
+    console.log($("#instructionsText").text());
+  }
+
   // intro to assessment study
   assessmentStudyFraming: function() {
-    var header = "Stage 1: Word Pairs";
-    var text = "First, you will be presented with 24 Swahili words paired with \
+    var header = "Word Pairs";
+    var text = "In a moment, you will be presented with 20 Swahili words paired with \
     their English translations. You will see each Swahili-English word pair \
     for 5 seconds, and then the screen will automatically advance to the \
     next pair. Please pay attention, and study the pair so you can type \
@@ -639,7 +665,7 @@ var experiment = {
     console.log($("#instructionsText").text());
   },
 
-  // 24 items, View each item for 5 sec
+  // 20 items, View each item for 5 sec
   assessmentStudy: function() {
     var trials = experiment.assessmentStudyTrials;
     if (trials.length == 0) {
@@ -660,18 +686,24 @@ var experiment = {
   },
 
   assessmentStrategyFraming: function() {
-    var header = "Stage 2: Study Phase";
-    var text = "Next, you will study the 24 Swahili-English word pairs. \
+    var header = "Study Strategies";
+    var text = "Next, you will study the 20 Swahili-English word pairs. \
+    For each pair, you will be shown the Swahili word. You can click 'See Translation' \
+    to see the English Translation. Then, you can click 'Move On' to move on to the \
+    next word pair. If you don't click the buttons, the screens will automatically \
+    advance after 5 seconds."
+    /*var text = "Next, you will study the 20 Swahili-English word pairs. \
     For each pair, you will be shown the Swahili word. You can click 'See Translation' \
     to see the English Translation. Then, you can click 'Move On' to move on to the \
     next word pair. If you don't click the buttons, the screens will automatically \
     advance after 5 seconds. \
     <br><br> The 24 word pairs will be split into three sets of eight. You will be asked to use a \
-    different study strategy for each set."
+    different study strategy for each set."*/
     showSlide("textNext");
     $("#instructionsHeader").html(header);
     $("#instructionsText").html(text);
-    $("#nextButton").click(function(){$(this).blur(); experiment.assessmentChoiceFraming();});
+    $("#nextButton").click(function(){$(this).blur(); 
+      experiment.assessmentStrategyLatencyReveal("assessmentChoice");});
   },
 
   /* capture latency data */
@@ -695,53 +727,57 @@ var experiment = {
   },
 
   /*Then, you will have 5 seconds to study each pair using whatever method you would like. */
-  assessmentChoiceFraming: function() {
-    var header = "Set 1 of 3: Free Study";
-    var text = "Please study these 8 Swahili-English word pairs <b>using whatever \
-    study method you would like</b>.\
-    <br><br>Please make sure you understand these instructions before you begin."
-    showSlide("textNext");
-    $("#instructionsHeader").html(header);
-    $("#instructionsText").html(text);
-    $("#nextButton").click(function(){$(this).blur(); 
-      experiment.assessmentStrategyLatencyReveal("assessmentChoice");
-    });
-  },
+  // assessmentChoiceFraming: function() {
+  //   var header = "Set 1 of 3: Free Study";
+  //   var text = "Please study these 8 Swahili-English word pairs <b>using whatever \
+  //   study method you would like</b>.\
+  //   <br><br>Please make sure you understand these instructions before you begin."
+  //   showSlide("textNext");
+  //   $("#instructionsHeader").html(header);
+  //   $("#instructionsText").html(text);
+  //   $("#nextButton").click(function(){$(this).blur(); 
+  //     experiment.assessmentStrategyLatencyReveal("assessmentChoice");
+  //   });
+  // },
 
-  assessmentRestudyFraming: function() {
-    var header = "Set 2 of 3: Study by Review";
-    var text = "Please study these 8 Swahili-English word pairs by <b>quickly revealing the English Translation\
-    and reviewing it</b>.\
-    <br><br>Please make sure you understand these instructions before you begin."
-    showSlide("textNext");
-    $("#instructionsHeader").html(header);
-    $("#instructionsText").html(text);
-    $("#nextButton").click(function(){$(this).blur(); 
-      experiment.assessmentStrategyLatencyReveal("assessmentRestudy");
-    });
-  },
+  // assessmentRestudyFraming: function() {
+  //   var header = "Set 2 of 3: Study by Review";
+  //   var text = "Please study these 8 Swahili-English word pairs by <b>quickly revealing the English Translation\
+  //   and reviewing it</b>.\
+  //   <br><br>Please make sure you understand these instructions before you begin."
+  //   showSlide("textNext");
+  //   $("#instructionsHeader").html(header);
+  //   $("#instructionsText").html(text);
+  //   $("#nextButton").click(function(){$(this).blur(); 
+  //     experiment.assessmentStrategyLatencyReveal("assessmentRestudy");
+  //   });
+  // },
 
-  assessmentGenerateFraming: function() {
-    var header = "Set 3 of 3: Study by Recall";
-    var text = "Finally, please study these 8 Swahili-English word pairs by <b>trying to recall the \
-    English translation from memory before revealing it</b>.\
-    <br><br>Please make sure you understand these instructions before you begin."
-    showSlide("textNext");
-    $("#instructionsHeader").html(header);
-    $("#instructionsText").html(text);
-    $("#nextButton").click(function(){$(this).blur(); 
-      experiment.assessmentStrategyLatencyReveal("assessmentGenerate");
-    });
-  },
+  // assessmentGenerateFraming: function() {
+  //   var header = "Set 3 of 3: Study by Recall";
+  //   var text = "Finally, please study these 8 Swahili-English word pairs by <b>trying to recall the \
+  //   English translation from memory before revealing it</b>.\
+  //   <br><br>Please make sure you understand these instructions before you begin."
+  //   showSlide("textNext");
+  //   $("#instructionsHeader").html(header);
+  //   $("#instructionsText").html(text);
+  //   $("#nextButton").click(function(){$(this).blur(); 
+  //     experiment.assessmentStrategyLatencyReveal("assessmentGenerate");
+  //   });
+  // },
 
   assessmentStrategyLatencyReveal: function(stratType) {
     if (stratType == "assessmentChoice") {
       var trials = experiment.assessmentChoiceTrials;
-      if (trials.length == 0) {experiment.assessmentRestudyFraming(); return;} 
-    } else if (stratType == "assessmentRestudy") {
+      // toggle for latency pilot vs. assessment
+      // if (trials.length == 0) {experiment.assessmentRestudyFraming(); return;} 
+      if (trials.length == 0) {experiment.assessmentTestFraming(); return;} 
+    } // should never be triggered in intervention expt
+      else if (stratType == "assessmentRestudy") {
       var trials = experiment.assessmentRestudyTrials;
       if (trials.length == 0) {experiment.assessmentGenerateFraming(); return;} 
-    } else if (stratType == "assessmentGenerate") {
+    } // should never be triggered in intervention expt
+    else if (stratType == "assessmentGenerate") {
       var trials = experiment.assessmentGenerateTrials;
       if (trials.length == 0) {experiment.assessmentTestFraming(); return;} 
     }
@@ -815,7 +851,7 @@ var experiment = {
   correct English translation.”
   */
   assessmentTestFraming: function() {
-    var header = "Stage 3: Quiz"
+    var header = "Quiz"
     var text = "Let's see what you learned! Next, you will be shown each Swahili word again.\
       You’ll have 5 seconds to type the correct English translation. After 5 seconds,\
       the screen will automatically advance and save your input."
