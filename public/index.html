@@ -36,6 +36,7 @@
       <input style="margin-left: 10px" id="prolificId" name="prolificId">
       <div style="text-align: center">
         <button type="button" onclick="this.blur(); experiment.instructions();">Next</button>
+        <!-- <button type="button" onclick="this.blur(); experiment.interventionPredict();">Next</button> -->
       </div>
     </form>
   </div>
@@ -59,8 +60,8 @@
   </p>
   </div>
   <!-- Button to start the experiment. <code>this.blur()</code> removes the focus from the button, if the user pressed the button by using the keyboard, rather than the mouse. -->
-  <!-- <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button> -->
-  <button type="button" onclick="this.blur(); experiment.assessmentStudyFraming();">Start</button>
+  <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button>
+  <!-- <button type="button" onclick="this.blur(); experiment.assessmentStudyFraming();">Start</button> -->
   <button type="button" onclick="this.blur(); experiment.end();">End</button>
   <!-- <button type="button" onclick="this.blur(); experiment.assessmentChoiceFraming();">Start</button> -->
   <!-- Legal blurb that we're required to show. -->
@@ -81,7 +82,7 @@
       <li>Finally you will be quizzed on the 20 Swahili-English word pairs. On the quiz, you will be given the Swahili word, and asked to type the English translation.</li>
     </ol>
     In the first half, you will receive guidance on what study strategies to use. In the second half, you will be free to use whatever study strategies you choose. In total, you will learn 40 Swahili words and their English translations.
-    </br></br>
+    <br><br>
     You will be reminded of these instructions along the way. Let's get started!
   </p>
   </div>
@@ -110,6 +111,7 @@
   <div style="text-align: center">
     <h1 class="wordpair" id="wordpair">{{}}</h1>
   </div>
+  <div style="text-align: center"><span id="wait"> </span></div>
 </div>
 
 <!-- The occulder -->
@@ -125,6 +127,7 @@
     </form>
     <h1 hidden class="wordpair" id="feedback">{{}}</h1>
   </div>
+  <div style="text-align: center"><span id="wait2"> </span></div>
 </div>
 
 <!-- The restudy slide -->
@@ -137,6 +140,19 @@
       <input style="margin-left: 10px" id="restudiedWord" name="restudiedWord">
     </form>
   </div>
+  <div style="text-align: center"><span id="wait3"> </span></div>
+</div>
+
+<!-- The test slide -->
+<div class="slide" id="test">
+  <div style="text-align: center">
+    <form id="testForm" name="testForm" autocomplete="off" 
+      onkeypress="return event.keyCode != 13;">
+      <h1 class="wordpair" style="display: inline-block" id="swahiliTest" name="swahiliTest">{{}}</h1>
+      <input style="margin-left: 10px" id="testedWord" name="testedWord">
+    </form>
+  </div>
+  <div style="text-align: center"><span id="wait4"> </span></div>
 </div>
 
 <!-- The prediction slide with a Next button. -->
@@ -149,14 +165,17 @@
       <input id="firstPrediction" name="firstPrediction" type="number" min="0" max="10" required>
       <p style="display:inline"> / 10</p>
       <br><br>
+      <p class="block-text">Why did you make this prediction?</p>
+      <textarea id="explainFirstPrediction" name="explainFirstPrediction" rows="5" style="width: 500px"></textarea>
+      <br><br>
       <p id="secondPredictionText" class="block-text">{{}}</p>
       <input id="secondPrediction" name="secondPrediction" type="number" min="0" max="10" required>
       <p style="display:inline"> / 10</p>
       <br><br>
-      <p class="block-text">What did you consider when making your predictions?</p>
-      <textarea id="explainPrediction" name="explainPrediction" rows="5" style="width: 500px"></textarea>
+      <p class="block-text">Why did you make this prediction?</p>
+      <textarea id="explainSecondPrediction" name="explainSecondPrediction" rows="5" style="width: 500px"></textarea>
       <div style="text-align: center">
-        <button type="submit" id="predictNextButton">Next</button>
+        <button type="button" id="predictNextButton">Next</button>
       </div>
     </form>
   </div>
@@ -201,7 +220,14 @@
 
 <!-- The finish slide. -->
 <div class="slide" id="end">
-  Thank you very much for your participation in this study! Please copy and email this data to katiemc@stanford.edu with the subject line "Pilot Data".
+<div style="text-align: center">
+  Thank you very much for your participation in this study!
+
+  If you would like to give comments or feedback to the research team, please leave us a note:
+  <div>
+    <textarea id="comment" name="comment" rows="5" style="width: 500px"></textarea>
+  </div>
+</div>
 </div>
 
 <!-- Include the JavaScript file for the experiment. As written, that script immediately executes commands, so we include it here at the end of the HTML file to ensure that resources referenced by the script actually exist. For instance, one of the immediately executed commands is <code>showSlide("instructions")</code>. If we loaded experiment.js, say, in the <code>head</code> section, <code>showSlide("instructions")</code> would fail because the <code>instructions</code> slide doesn't exist yet. It is possible to load the script in <code>head</code> but you have to ensure that any immediately executed commands, if they rely on potentially uninitialized HTML elements, are _delayed_ until the page is ready, using either [window.onload][onload] or jQuery's more robust [$(document).ready()][domReady]  -->
