@@ -129,11 +129,27 @@ function createNewUser(prolificId, startDateTime) {
     prolificId: prolificId,
     startDateTime: startDateTime.toISOString(),
     endDateTime: "", 
+
+    interventionPredictRestudy: "",
+    interventionPredictRestudyReason: "",
+    interventionPredictGenerate: "",
+    interventionPredictGenerateReason: "",
+
     interventionRestudyStrategyScoreRound1: "",
     interventionGenerateStrategyScoreRound1: "",
     interventionRestudyStrategyScoreRound2: "",
     interventionGenerateStrategyScoreRound2: "",
     comments : ""
+  });
+}
+
+function updateUserPredictions(prolificId, predictRestudy, predictRestudyReason,
+  predictGenerate, predictGenerateReason){
+  db.ref('users/' + prolificId).update({
+    interventionPredictRestudy : predictRestudy,
+    interventionPredictRestudyReason : predictRestudyReason,
+    interventionPredictGenerate : predictGenerate,
+    interventionPredictGenerateReason : predictGenerateReason
   });
 }
 
@@ -178,11 +194,6 @@ function createNewItem(prolificId, itemIndex) {
     interventionStrategyAccuracyRound1: "",
     interventionStrategyUserInputRound2: "",
     interventionStrategyAccuracyRound2: "",
-
-    interventionPredictRestudy: "",
-    interventionPredictRestudyReason: "",
-    interventionPredictGenerate: "",
-    interventionPredictGenerateReason: "",
     interventionTestUserInput: "",
     interventionTestAccuracy: "",
 
@@ -261,6 +272,8 @@ var numTrials = 4,
   // condition = randomInteger(4), // 2x2
   // condition = randomInteger(2), // expt vs. control
   condition = 2, // fixed to expt?
+  /* toggle intervention prediction order */
+  predictRestudyFirst = randomInteger(2), // 1 or 0
   myTrialOrder = shuffle([...Array(numTrials).keys()]),
   /* toggle intervention/assessment trials to test intervention */
   // interventionTrials = myTrialOrder.slice(0),
@@ -407,7 +420,7 @@ var experiment = {
     for 5 seconds, and then the screen will automatically advance to the \
     next pair. Please pay attention, and study each pair so you can type \
     the English translation given the Swahili word. \
-    <br><br> Please make sure you understand these instructions before you begin.`;
+    <br><br>Please make sure you understand these instructions before you begin.`;
     showSlide("textNext");
     $("#instructionsHeader").text(header);
     $("#instructionsText").text(text);
@@ -641,17 +654,26 @@ var experiment = {
 
   // ask for prediction
   interventionPredict: function() {
-    // if (randomInteger(2)){ } // randomize order (if so, match on feedback slide)
-    var firstPredictionText = `For 10 of these Swahili-English word pairs, you studied using  
+    var restudyPredictionText = `For 10 of these Swahili-English word pairs, you studied using  
     the <b>review</b> strategy--you reviewed the English translation by copying it 
     into the textbox. Out of these 10, how many English translations do you 
     think you’ll remember on the quiz?`;
     
-    var secondPredictionText = `For 10 of these Swahili-English word pairs, you studied using 
+    var generatePredictionText = `For 10 of these Swahili-English word pairs, you studied using 
     the <b>recall</b> strategy--you tried to recall the English translation 
     from memory. Out of these 10, how many English translations do you 
     think you’ll remember on the quiz?`;
     
+    if (predictRestudyFirst){
+      // predict restudy first, then predict generate
+      var firstPredictionText = restudyPredictionText;
+      var secondPredictionText = generatePredictionText;
+    } else {
+      // predict generate first, then predict restudy
+      var firstPredictionText = generatePredictionText;
+      var secondPredictionText = restudyPredictionText;
+    }
+
     showSlide("predictNext");
     $("#firstPredictionText").html(firstPredictionText);
     $("#secondPredictionText").html(secondPredictionText);
@@ -662,21 +684,35 @@ var experiment = {
 
   validatePredictionForm: function(){
     var firstPrediction = parseInt($("#firstPrediction").val()),
-      secondPrediction = parseInt($("#secondPrediction").val());
+      secondPrediction = parseInt($("#secondPrediction").val()),
+      firstPredictionReason = $("#firstPredictionReason").val(),
+      secondPredictionReason = $("#secondPredictionReason").val();
     if (!( firstPrediction >= 0 & firstPrediction <= 10 &
           secondPrediction >= 0 & secondPrediction <= 10)){
       alert("Please make a prediction from 0 to 10");
       return false; 
     } else { 
-      experiment.capturePrediction(firstPrediction, secondPrediction);
+      experiment.capturePrediction(firstPrediction, firstPredictionReason,
+        secondPrediction, secondPredictionReason);
     }
   },
 
-  capturePrediction: function(firstPrediction, secondPrediction) {
-    experiment.predictionRestudy = firstPrediction;
-    experiment.predictionGenerate = secondPrediction;
+  capturePrediction: function(firstPrediction, firstPredictionReason,
+    secondPrediction, secondPredictionReason) {
+    if (predictRestudyFirst){
+      var predictRestudy = firstPrediction,
+        predictRestudyReason = firstPredictionReason,
+        predictGenerate = secondPrediction,
+        predictGenerateReason = secondPredictionReason;
+    } else {
+      var predictRestudy = secondPrediction,
+        predictRestudyReason = secondPredictionReason,
+        predictGenerate = firstPrediction,
+        predictGenerateReason = firstPredictionReason;
+    }
+    updateUserPredictions(experiment.prolificId, predictRestudy, predictRestudyReason,
+      predictGenerate, predictGenerateReason);
     experiment.interventionTestFraming();
-    // experiment.end();
     return false;
   },
 
@@ -783,13 +819,25 @@ var experiment = {
   When using the review strategy, you scored __ /10
   */
   interventionFeedback: function() {
-    var text = `You scored ${experiment.interventionGenerateTestScore + experiment.interventionRestudyTestScore} / 20. 
-    <br><br> On the items that you studied by <b>reviewing</b> the Swahili-English word pair, you scored 
-    ${experiment.interventionRestudyTestScore} /10. 
-    <br><br> On the items that you studied by trying to <b>recall</b> the 
+    
+    var text = `You scored ${experiment.interventionGenerateTestScore + experiment.interventionRestudyTestScore} / 20.`
+    var restudyFeedbackText = `On the items that you studied by <b>reviewing</b> the Swahili-English word pair, you scored 
+    ${experiment.interventionRestudyTestScore} /10.`
+    var generateFeedbackText = `On the items that you studied by trying to <b>recall</b> the 
     English translation from memory, you scored ${experiment.interventionGenerateTestScore} /10.`
+
+    if (predictRestudyFirst) {
+      var firstFeedbackText = restudyFeedbackText;
+      var secondFeedbackText = generateFeedbackText;
+    } else {
+      var firstFeedbackText = generateFeedbackText;
+      var secondFeedbackText = restudyFeedbackText;
+    }
+    
     showSlide("feedbackNext");
     $("#feedbackText").html(text);
+    $("#firstFeedbackText").html(firstFeedbackText);
+    $("#secondFeedbackText").html(secondFeedbackText);
     // TOGGLE THIS TO GO TO ASSESSMENT/END
     $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentFraming()});
     // $("#feedbackNextButton").click(function(){$(this).blur(); experiment.end()});

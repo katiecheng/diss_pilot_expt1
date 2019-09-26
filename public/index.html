@@ -166,14 +166,14 @@
       <p style="display:inline"> / 10</p>
       <br><br>
       <p class="block-text">Why did you make this prediction?</p>
-      <textarea id="explainFirstPrediction" name="explainFirstPrediction" rows="5" style="width: 500px"></textarea>
+      <textarea id="firstPredictionReason" name="firstPredictionReason" rows="5" style="width: 500px"></textarea>
       <br><br>
       <p id="secondPredictionText" class="block-text">{{}}</p>
       <input id="secondPrediction" name="secondPrediction" type="number" min="0" max="10" required>
       <p style="display:inline"> / 10</p>
       <br><br>
       <p class="block-text">Why did you make this prediction?</p>
-      <textarea id="explainSecondPrediction" name="explainSecondPrediction" rows="5" style="width: 500px"></textarea>
+      <textarea id="secondPredictionReason" name="secondPredictionReason" rows="5" style="width: 500px"></textarea>
       <div style="text-align: center">
         <button type="button" id="predictNextButton">Next</button>
       </div>
@@ -186,7 +186,9 @@
   <div style="width: 500px; margin: 0 auto;">
     <h1 id="feedbackHeader">Quiz Results</h1>
   </div>
-  <p class="block-text" id="feedbackText">{{}}</p>
+  <div><p class="block-text" id="feedbackText">{{}}</p></div>
+  <div><p class="block-text" id="firstFeedbackText">{{}}</p></div>
+  <div><p class="block-text" id="secondFeedbackText">{{}}</p></div>
   <div style="text-align: center">
     <button type="button" id="feedbackNextButton">Next</button>
   </div>
