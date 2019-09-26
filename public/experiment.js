@@ -349,21 +349,26 @@ showSlide("getProlificId");
 /* I implement the sequence as an object with properties and methods. The benefit of encapsulating everything in an object is that it's conceptually coherent (i.e. the <code>data</code> variable belongs to this particular sequence and not any other) and allows you to **compose** sequences to build more complicated experiments. For instance, if you wanted an experiment with, say, a survey, a reaction time test, and a memory test presented in a number of different orders, you could easily do so by creating three separate sequences and dynamically setting the <code>end()</code> function for each sequence so that it points to the next. **More practically, you should stick everything in an object and submit that whole object so that you don't lose data (e.g. randomization parameters, what condition the subject is in, etc). Don't worry about the fact that some of the object properties are functions -- mmturkey (the Turk submission library) will strip these out.*/
 var experiment = {
   prolificID: "",
-  // Properties
+  /* Properties */
   numTrials: numTrials,
   numStrategyRounds: numStrategyRounds,
   condition: condition,
   myTrialOrder: myTrialOrder, // already shuffled
   trialDuration: trialDuration,
   feedbackDuration: feedbackDuration,
-  // interventionTrials is the first half of myTrialOrder
+
+  /* interventionTrials is the first half of myTrialOrder */
   interventionStudyTrials: shuffle(interventionTrials.slice(0)), // study order
   interventionStrategyTrials1: shuffle(interventionTrials.slice(0)), // strategy order 1
   interventionStrategyTrials2: shuffle(interventionTrials.slice(0)), // strategy order 2
   interventionRestudyTrials: interventionTrials.slice((interventionTrials.length/2), interventionTrials.length),
   interventionGenerateTrials: interventionTrials.slice(0,(interventionTrials.length/2)),
+  interventionRestudyTrialsSave: [],
+  interventionGenerateTrialsSave: [],
   interventionTestTrials: shuffle(interventionTrials.slice(0)), // test order
-  // assessmentTrials is the second half of myTrialOrder
+
+
+  /* assessmentTrials is the second half of myTrialOrder */
   assessmentStudyTrials: shuffle(assessmentTrials.slice(0)),
   // assessmentStrategyTrials: assessmentTrials.slice(0),
   // TOGGLE for pilot latency vs. assessment
@@ -373,10 +378,11 @@ var experiment = {
   // assessmentRestudyTrials: assessmentTrials.slice(assessmentTrials.length/3,(assessmentTrials.length/3*2)),
   // assessmentGenerateTrials: assessmentTrials.slice((assessmentTrials.length/3*2), assessmentTrials.length),
   // assessmentChoiceTrialsSave: [],
-  // assessmentRestudyTrialsSave: [],
-  // assessmentGenerateTrialsSave: [],
+  assessmentRestudyTrialsSave: [],
+  assessmentGenerateTrialsSave: [],
   assessmentTestTrials: shuffle(assessmentTrials.slice(0)),
-  // aggregate scores and outcomes
+
+  /* aggregate scores and outcomes */
   interventionRestudyStrategyScoreRound1: 0,
   interventionGenerateStrategyScoreRound1: 0,
   interventionRestudyStrategyScoreRound2: 0,
@@ -521,6 +527,7 @@ var experiment = {
     wait3.innerHTML = "";
     wait4.innerHTML = "";
     if (generateItem) {
+      experiment.interventionGenerateTrialsSave.push(currItem);
       showSlide("generate");
       $("#swahili").text(swahili + " : ");
       $("#generatedWord").val('');
@@ -529,6 +536,7 @@ var experiment = {
         $("#generatedForm").submit(experiment.captureInterventionStrategyWord("generate", round, currItem, swahili, english));
       }, trialDuration-feedbackDuration); 
     } else if (restudyItem) {
+      experiment.interventionRestudyTrialsSave.push(currItem);
       showSlide("restudy");
       $("#restudyWordpair").text(swahili + " : " + english);
       $("#restudySwahili").text(swahili + " : ");
@@ -654,14 +662,14 @@ var experiment = {
 
   // ask for prediction
   interventionPredict: function() {
-    var restudyPredictionText = `For 10 of these Swahili-English word pairs, you studied using  
+    var restudyPredictionText = `For ${experiment.numTrials/4} of these Swahili-English word pairs, you studied using  
     the <b>review</b> strategy--you reviewed the English translation by copying it 
-    into the textbox. Out of these 10, how many English translations do you 
+    into the textbox. Out of these ${experiment.numTrials/4}, how many English translations do you 
     think you’ll remember on the quiz?`;
     
-    var generatePredictionText = `For 10 of these Swahili-English word pairs, you studied using 
+    var generatePredictionText = `For ${experiment.numTrials/4} of these Swahili-English word pairs, you studied using 
     the <b>recall</b> strategy--you tried to recall the English translation 
-    from memory. Out of these 10, how many English translations do you 
+    from memory. Out of these ${experiment.numTrials/4}, how many English translations do you 
     think you’ll remember on the quiz?`;
     
     if (predictRestudyFirst){
@@ -677,6 +685,7 @@ var experiment = {
     showSlide("predictNext");
     $("#firstPredictionText").html(firstPredictionText);
     $("#secondPredictionText").html(secondPredictionText);
+    $(".denominator").html(`/${experiment.numTrials/4}`);
     $("#predictNextButton").click(function(){$(this).blur(); 
       $("#predictionForm").submit(experiment.validatePredictionForm());
     })
@@ -773,8 +782,8 @@ var experiment = {
       swahili = swahili_english_pairs[currItem][0],
       english = swahili_english_pairs[currItem][1];
 
-      console.log(swahili);
-      console.log(english);
+    console.log(swahili);
+    console.log(english);
 
     experiment.interventionTestOrderCounter += 1;
     updateItemTestOrderData(experiment.prolificId, currItem, experiment.interventionTestOrderCounter);
@@ -796,13 +805,15 @@ var experiment = {
 
   captureInterventionTestWord: function(currItem, swahili, english){
     var userInput = $("#testedWord").val().toLowerCase(),
-      generateItem = ($.inArray(currItem, experiment.assessmentGenerateTrialsSave) != -1),
-      restudyItem = ($.inArray(currItem, experiment.assessmentRestudyTrialsSave) != -1),
+      generateItem = ($.inArray(currItem, experiment.interventionGenerateTrialsSave) != -1),
+      restudyItem = ($.inArray(currItem, experiment.interventionRestudyTrialsSave) != -1),
       accuracy = english == userInput ? 1 : 0;
 
     if (generateItem){
+      console.log("generate item");
         experiment.interventionGenerateTestScore += accuracy;
       } else if (restudyItem){
+              console.log("restudy item");
         experiment.interventionRestudyTestScore += accuracy;
       } 
       experiment.interventionTest();
@@ -820,11 +831,11 @@ var experiment = {
   */
   interventionFeedback: function() {
     
-    var text = `You scored ${experiment.interventionGenerateTestScore + experiment.interventionRestudyTestScore} / 20.`
+    var text = `You scored ${experiment.interventionGenerateTestScore + experiment.interventionRestudyTestScore} / ${experiment.numTrials/2}.`
     var restudyFeedbackText = `On the items that you studied by <b>reviewing</b> the Swahili-English word pair, you scored 
-    ${experiment.interventionRestudyTestScore} /10.`
+    ${experiment.interventionRestudyTestScore}/${experiment.numTrials/4}.`
     var generateFeedbackText = `On the items that you studied by trying to <b>recall</b> the 
-    English translation from memory, you scored ${experiment.interventionGenerateTestScore} /10.`
+    English translation from memory, you scored ${experiment.interventionGenerateTestScore}/${experiment.numTrials/4}.`
 
     if (predictRestudyFirst) {
       var firstFeedbackText = restudyFeedbackText;
