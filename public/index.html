@@ -36,7 +36,7 @@
       <input style="margin-left: 10px" id="prolificId" name="prolificId">
       <div style="text-align: center">
         <button type="button" onclick="this.blur(); experiment.instructions();">Next</button>
-        <!-- <button type="button" onclick="this.blur(); experiment.interventionPredict();">Next</button> -->
+        <!-- <button type="button" onclick="this.blur(); experiment.end();">Next</button> -->
       </div>
     </form>
   </div>
@@ -222,11 +222,14 @@
 
 <!-- The finish slide. -->
 <div class="slide" id="end">
+<div style="width: 500px; margin: 0 auto; text-align: center; background-color: #8C1516; padding: 20px 15px 10px 10px">
+    <img src="images/stanford.png" height="46" width="360" alt="Stanford University">
+</div>
+<div class="block-text">
+  <p>You have reached the end of the study! Thank you very much for your participation.</p>
+  <p>If you would like to give comments or feedback to the research team, kindly leave us a note:</p>
+</div>
 <div style="text-align: center">
-  Thank you very much for your participation in this study!
-
-  If you would like to give comments or feedback to the research team, please leave us a note:
-  <div>
     <textarea id="comment" name="comment" rows="5" style="width: 500px"></textarea>
   </div>
 </div>

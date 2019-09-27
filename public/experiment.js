@@ -142,6 +142,7 @@ function createNewUser(prolificId, startDateTime) {
 
     interventionTestRestudyScore: "",
     interventionTestGenerateScore: "",
+    assessmentTestScore: "",
 
     comments : ""
   });
@@ -158,7 +159,6 @@ function updateUserPredictions(prolificId, predictRestudy, predictRestudyReason,
 }
 
 function updateUserStrategyScores(prolificId, round, interventionStrategyRestudyScore, interventionStrategyGenerateScore) {
-  
   if (round == 1) {
     db.ref('users/' + prolificId).update({
       interventionStrategyRestudyScoreRound1: interventionStrategyRestudyScore,
@@ -176,7 +176,13 @@ function updateUserInterventionTestScores(prolificId, restudyScore, generateScor
   db.ref('users/' + prolificId).update({
     interventionTestRestudyScore: restudyScore,
     interventionTestGenerateScore: generateScore
-  })
+  });
+}
+
+function updateUserAssessmentTestScore(prolificId, assessmentScore) {
+  db.ref('users/' + prolificId).update({
+    assessmentTestScore : assessmentScore
+  });
 }
 
 function updateUserComments(prolificId, comments) {
@@ -192,14 +198,17 @@ function updateUserEndDateTime(prolificId, endDateTime) {
 }
 
 // When you start a new session, create all items, with all the columns that will have to be populated
-function createNewItem(prolificId, itemIndex) {
+function createNewItem(prolificId, itemIndex, swahili, english) {
   db.ref('items/' + prolificId + "_" + itemIndex).set({
     prolificId: prolificId,
     itemIndex: itemIndex,
+    itemSwahili: swahili,
+    itemEnglish: english,
+    
     studyOrder: "",
     strategyOrder: "",
     testOrder: "",
-    userInput: "",
+    testUserInput: "",
     testAccuracy: "",
 
     interventionStrategy: "",
@@ -250,7 +259,7 @@ function updateItemStrategyData(prolificId, itemIndex, interventionStrategy, rou
 function updateItemTestAccuracyData(prolificId, itemIndex, testAccuracy, userInput){
   db.ref('items/' + prolificId + "_" + itemIndex).update({
     testAccuracy: testAccuracy,
-    userInput: userInput
+    testUserInput: userInput
   });
 }
 
@@ -380,7 +389,7 @@ var experiment = {
   /* assessmentTrials is the second half of myTrialOrder */
   assessmentStudyTrials: shuffle(assessmentTrials.slice(0)),
   // assessmentStrategyTrials: assessmentTrials.slice(0),
-  // TOGGLE for pilot latency vs. assessment
+  /* TOGGLE for pilot latency vs. assessment */
   assessmentChoiceTrials: shuffle(assessmentTrials.slice(0)),
   assessmentChoiceTrialsSave: [],
   // assessmentChoiceTrials: assessmentTrials.slice(0,assessmentTrials.length/3),
@@ -392,25 +401,21 @@ var experiment = {
   assessmentTestTrials: shuffle(assessmentTrials.slice(0)),
 
   /* aggregate scores and outcomes */
+  interventionStudyOrderCounter: 0,
+  interventionStrategyOrderCounter: 0,
   interventionStrategyRestudyScoreRound1: 0,
   interventionStrategyGenerateScoreRound1: 0,
   interventionStrategyRestudyScoreRound2: 0,
   interventionStrategyGenerateScoreRound2: 0,
   predictionRestudy: -1,
   predictionGenerate: -1,
+  interventionTestOrderCounter: 0,
   interventionTestRestudyScore: 0,
   interventionTestGenerateScore: 0,
-  interventionStudyOrderCounter: 0,
-  interventionStrategyOrderCounter: 0,
-  interventionTestOrderCounter: 0,
   assessmentStudyOrderCounter: 0,
   assessmentStrategyOrderCounter: 0,
   assessmentTestOrderCounter: 0,
-  // TODO DELETE: // An array to store the item-level data that we're collecting.
-  // TODO DELETE: interventionStrategyData: [],
-  // TODO DELETE: interventionTestData: [],
-  // TODO DELETE: assessmentStrategyData: [],
-  // TODO DELETE: assessmentTestData: [],
+  assessmentTestScore: 0,
 
   // Instructions
   instructions: function() {
@@ -419,7 +424,10 @@ var experiment = {
       var startDateTime = new Date();
       createNewUser(experiment.prolificId, startDateTime);
       for (i=0; i<experiment.myTrialOrder.length; i++) {
-        createNewItem(experiment.prolificId, experiment.myTrialOrder[i]);
+        createNewItem(experiment.prolificId, 
+          i,
+          swahili_english_pairs[i][0],
+          swahili_english_pairs[i][1]);
       }
       /* toggle instructions slide */
       // showSlide("instructionsLatency");
@@ -430,12 +438,12 @@ var experiment = {
   //Intro to study
   interventionStudyFraming: function() { 
     var header = "Word Pairs";
-    var text = `In a moment, you will be presented with 20 Swahili words paired with \
+    var text = "In a moment, you will be presented with 20 Swahili words paired with \
     their English translations. You will see each Swahili-English word pair \
     for 5 seconds, and then the screen will automatically advance to the \
     next pair. Please pay attention, and study each pair so you can type \
     the English translation given the Swahili word. \
-    <br><br>Please make sure you understand these instructions before you begin.`;
+    <br><br>Please make sure you understand these instructions before you begin.";
     showSlide("textNext");
     $("#instructionsHeader").text(header);
     $("#instructionsText").text(text);
@@ -528,6 +536,10 @@ var experiment = {
       generateItem = ($.inArray(currItem, experiment.interventionGenerateTrials) != -1),
       restudyItem = ($.inArray(currItem, experiment.interventionRestudyTrials) != -1);
 
+    console.log(currItem);
+    console.log(swahili);
+    console.log(english);
+
     experiment.interventionStrategyOrderCounter += 1;
     updateItemStrategyOrderData(experiment.prolificId, currItem, experiment.interventionStrategyOrderCounter);
 
@@ -557,20 +569,22 @@ var experiment = {
     }
   },
 
-  captureInterventionStrategyWord: function(strategy, round, currItem, swahili, english){
+  captureInterventionStrategyWord: function(strategy, round, currItem, swahili, english) {
     if (strategy == "generate"){
       var userInput = $("#generatedWord").val().toLowerCase();
     } else if (strategy == "restudy"){
       var userInput = $("#restudiedWord").val().toLowerCase();
     }
 
+    console.log(userInput)
+    
     var accuracy = english == userInput ? 1 : 0;
 
     if (strategy == "generate"){
       if (round == 1){
-        experiment.interventionGenerateStrategyScoreRound1 += accuracy;
+        experiment.interventionStrategyGenerateScoreRound1 += accuracy;
       } else if (round == 2) {
-        experiment.interventionGenerateStrategyScoreRound2 += accuracy;
+        experiment.interventionStrategyGenerateScoreRound2 += accuracy;
       }
       experiment.interventionGenerateFeedback(round, swahili, english, accuracy);
     } else if (strategy == "restudy"){
@@ -598,76 +612,6 @@ var experiment = {
       $("#feedback").hide();
       experiment.interventionStrategy(round);}, feedbackDuration); 
   },
-
-
-
-/*
-  // Capture and save trial
-  // used to capture input at interventionStrategy, interventionTest, and assessmentTest
-  captureWord: function(exptPhase, round, currItem, swahili, english) {
-    var generatedWord = $("#generatedWord").val().toLowerCase(),
-      restudiedWord = $("#restudiedWord").val().toLowerCase(),
-      generateItem = ($.inArray(currItem, experiment.assessmentGenerateTrialsSave) != -1),
-      restudyItem = ($.inArray(currItem, experiment.assessmentRestudyTrialsSave) != -1);
-      choiceItem = ($.inArray(currItem, experiment.assessmentChoiceTrialsSave) != -1);
-
-    if (generateItem){
-      var strategy = "generate";
-    } else if (restudyItem){
-      var strategy = "restudy";
-    } else if (choiceItem) {
-      var strategy = "free choice";
-    }
-
-    if (exptPhase == "interventionStrategy"){
-      if (restudyItem){
-        var userInput = restudiedWord;
-      } else if (generateItem) {
-        var userInput = generatedWord;
-      }
-    } else {
-      var userInput = generatedWord;
-    }
-
-    var accuracy = english == userInput ? 1 : 0,
-      data = {
-        exptPhase: exptPhase,
-        strategy: strategy,
-        item: currItem,
-        swahili: swahili,
-        english: english,
-        userInput: userInput,
-        accuracy: accuracy
-      };
-
-      // updateItemStrategyTypeData(experiment.prolificId, currItem, strategyAbbrev);
-
-    if (exptPhase == "interventionStrategy"){
-      if (generateItem){
-        experiment.interventionGenerateStrategyScore[round-1] += accuracy;
-        experiment.interventionGenerateFeedback(round, swahili, english, accuracy);
-      } else if (restudyItem){
-        experiment.interventionRestudyStrategyScore[round-1] += accuracy;
-        experiment.interventionStrategy(round);
-      } 
-      experiment.interventionStrategyData.push(data);
-    } else if (exptPhase == "interventionTest"){
-      if (generateItem){
-        experiment.interventionGenerateTestScore += accuracy;
-      } else if (restudyItem){
-        experiment.interventionRestudyTestScore += accuracy;
-      } 
-      experiment.test(exptPhase);
-      experiment.interventionTestData.push(data);
-    } else if (exptPhase == "assessmentTest"){
-      updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
-      experiment.test(exptPhase);
-      experiment.assessmentTestData.push(data);
-    }
-
-    return false; // stop form from being submitted
-  },
-  */
 
   // ask for prediction
   interventionPredict: function() {
@@ -750,38 +694,6 @@ var experiment = {
     console.log($("#instructionsText").text());
   },
 
-
-  // (All items rote for trialDuration sec, +/- feedback on each item)
-  // test: function(exptPhase) {
-  //   if (exptPhase == "interventionTest") {
-  //     var trials = experiment.interventionTestTrials;
-  //     if (trials.length == 0) {experiment.interventionFeedback(); return;} 
-  //   } else if (exptPhase == "assessmentTest") {
-  //     var trials = experiment.assessmentTestTrials;
-  //     if (trials.length == 0) {experiment.end(); return;} 
-  //   }
-
-  //   // Get the current trial - <code>shift()</code> removes the first element of the array and returns it.
-  //   var currItem = parseInt(trials.shift()),
-  //     swahili = swahili_english_pairs[currItem][0],
-  //     english = swahili_english_pairs[currItem][1];
-
-  //   if (exptPhase == "assessmentTest") {
-  //     experiment.assessmentTestOrderCounter += 1;
-  //     updateItemTestData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter);
-  //   }
-
-  //   showSlide("generate");
-  //   $("#swahili").text(swahili + " : ");
-  //   $("#generatedWord").val('');
-  //   $("#generatedWord").focus();
-
-  //   // Wait 5 seconds before starting the next trial.
-  //   setTimeout(function(){$("#generatedForm").submit(
-  //     experiment.captureWord(exptPhase, 0, currItem, swahili, english));
-  //   }, trialDuration); 
-  // },
-
   interventionTest: function(){
     var trials = experiment.interventionTestTrials;
     if (trials.length == 0) {
@@ -797,6 +709,7 @@ var experiment = {
       swahili = swahili_english_pairs[currItem][0],
       english = swahili_english_pairs[currItem][1];
 
+    console.log(currItem);
     console.log(swahili);
     console.log(english);
 
@@ -813,17 +726,21 @@ var experiment = {
     $("#testedWord").focus();
 
     // Wait 5 seconds before starting the next trial.
-    setTimeout(function(){$("#testedForm").submit(
-      experiment.captureInterventionTestWord(currItem, swahili, english));
-    }, trialDuration); 
+    setTimeout(
+      function(){
+        $("#testedForm").submit(experiment.captureInterventionTestWord(currItem, swahili, english));
+      }, 
+    trialDuration); 
   },
 
-  captureInterventionTestWord: function(currItem, swahili, english){
+  captureInterventionTestWord: function(currItem, swahili, english) {
     var userInput = $("#testedWord").val().toLowerCase(),
       generateItem = ($.inArray(currItem, experiment.interventionGenerateTrialsSave) != -1),
       restudyItem = ($.inArray(currItem, experiment.interventionRestudyTrialsSave) != -1),
       accuracy = english == userInput ? 1 : 0;
 
+    console.log(userInput)
+    
     if (generateItem){
         experiment.interventionTestGenerateScore += accuracy;
     } else if (restudyItem){
@@ -863,9 +780,7 @@ var experiment = {
     $("#feedbackText").html(text);
     $("#firstFeedbackText").html(firstFeedbackText);
     $("#secondFeedbackText").html(secondFeedbackText);
-    // TOGGLE THIS TO GO TO ASSESSMENT/END
     $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentFraming()});
-    // $("#feedbackNextButton").click(function(){$(this).blur(); experiment.end()});
   },
 
   assessmentFraming: function() {
@@ -879,7 +794,7 @@ var experiment = {
     $("#instructionsHeader").text(header);
     $("#instructionsText").html(text);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudyFraming();});
-    console.log($("#instructionsText").text());
+    // console.log($("#instructionsText").text());
   },
 
   // intro to assessment study
@@ -961,6 +876,7 @@ var experiment = {
     }
   },
 
+  /* For Latency pilot */
   /*Then, you will have 5 seconds to study each pair using whatever method you would like. */
   // assessmentChoiceFraming: function() {
   //   var header = "Set 1 of 3: Free Study";
@@ -1004,14 +920,14 @@ var experiment = {
   assessmentStrategyLatencyReveal: function(stratType) {
     if (stratType == "assessmentChoice") {
       var trials = experiment.assessmentChoiceTrials;
-      // toggle for latency pilot vs. assessment
+      /* toggle for latency pilot vs. assessment */
       // if (trials.length == 0) {experiment.assessmentRestudyFraming(); return;} 
       if (trials.length == 0) {experiment.assessmentTestFraming(); return;} 
-    } // should never be triggered in intervention expt
+    } /* should never be triggered in intervention expt */
       else if (stratType == "assessmentRestudy") {
       var trials = experiment.assessmentRestudyTrials;
       if (trials.length == 0) {experiment.assessmentGenerateFraming(); return;} 
-    } // should never be triggered in intervention expt
+    } /* should never be triggered in intervention expt */
     else if (stratType == "assessmentGenerate") {
       var trials = experiment.assessmentGenerateTrials;
       if (trials.length == 0) {experiment.assessmentTestFraming(); return;} 
@@ -1098,12 +1014,20 @@ var experiment = {
 
   assessmentTest: function(){
     var trials = experiment.assessmentTestTrials;
-    if (trials.length == 0) {experiment.end(); return;} 
+    if (trials.length == 0) {
+      updateUserAssessmentTestScore(experiment.prolificId, experiment.assessmentTestScore);
+      experiment.end(); 
+      return;
+    } 
 
     // Get the current trial - <code>shift()</code> removes the first element of the array and returns it.
     var currItem = parseInt(trials.shift()),
       swahili = swahili_english_pairs[currItem][0],
       english = swahili_english_pairs[currItem][1];
+
+    console.log(currItem);
+    console.log(swahili);
+    console.log(english);
 
     experiment.assessmentTestOrderCounter += 1;
     updateItemTestOrderData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter);
@@ -1113,7 +1037,7 @@ var experiment = {
     wait3.innerHTML = "";
     wait4.innerHTML = "";
     showSlide("test");
-    $("#swahili").text(swahili + " : ");
+    $("#swahiliTest").text(swahili + " : ");
     $("#testedWord").val('');
     $("#testedWord").focus();
 
@@ -1127,9 +1051,11 @@ var experiment = {
     var userInput = $("#testedWord").val().toLowerCase(),
       accuracy = english == userInput ? 1 : 0;
 
+    console.log(userInput)
+
+    experiment.assessmentTestScore += accuracy;
     experiment.assessmentTest();
     updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
-    experiment.test(exptPhase);
     // experiment.assessmentTestData.push(data);
   },
 
