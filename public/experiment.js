@@ -135,10 +135,14 @@ function createNewUser(prolificId, startDateTime) {
     interventionPredictGenerate: "",
     interventionPredictGenerateReason: "",
 
-    interventionRestudyStrategyScoreRound1: "",
-    interventionGenerateStrategyScoreRound1: "",
-    interventionRestudyStrategyScoreRound2: "",
-    interventionGenerateStrategyScoreRound2: "",
+    interventionStrategyRestudyScoreRound1: "",
+    interventionStrategyGenerateScoreRound1: "",
+    interventionStrategyRestudyScoreRound2: "",
+    interventionStrategyGenerateScoreRound2: "",
+
+    interventionTestRestudyScore: "",
+    interventionTestGenerateScore: "",
+
     comments : ""
   });
 }
@@ -153,19 +157,26 @@ function updateUserPredictions(prolificId, predictRestudy, predictRestudyReason,
   });
 }
 
-function updateUserStrategyTotals(prolificId, round, interventionRestudyStrategyScore, interventionGenerateStrategyScore) {
+function updateUserStrategyScores(prolificId, round, interventionStrategyRestudyScore, interventionStrategyGenerateScore) {
   
   if (round == 1) {
     db.ref('users/' + prolificId).update({
-      interventionRestudyStrategyScoreRound1: interventionRestudyStrategyScore,
-      interventionGenerateStrategyScoreRound1: interventionGenerateStrategyScore
+      interventionStrategyRestudyScoreRound1: interventionStrategyRestudyScore,
+      interventionStrategyGenerateScoreRound1: interventionStrategyGenerateScore
     });
   } else if (round == 2) {
     db.ref('users/' + prolificId).update({
-      interventionRestudyStrategyScoreRound2: interventionRestudyStrategyScore,
-      interventionGenerateStrategyScoreRound2: interventionGenerateStrategyScore
+      interventionStrategyRestudyScoreRound2: interventionStrategyRestudyScore,
+      interventionStrategyGenerateScoreRound2: interventionStrategyGenerateScore
     });
   }
+}
+
+function updateUserInterventionTestScores(prolificId, restudyScore, generateScore){
+  db.ref('users/' + prolificId).update({
+    interventionTestRestudyScore: restudyScore,
+    interventionTestGenerateScore: generateScore
+  })
 }
 
 function updateUserComments(prolificId, comments) {
@@ -188,20 +199,18 @@ function createNewItem(prolificId, itemIndex) {
     studyOrder: "",
     strategyOrder: "",
     testOrder: "",
+    userInput: "",
+    testAccuracy: "",
 
     interventionStrategy: "",
     interventionStrategyUserInputRound1: "",
     interventionStrategyAccuracyRound1: "",
     interventionStrategyUserInputRound2: "",
     interventionStrategyAccuracyRound2: "",
-    interventionTestUserInput: "",
-    interventionTestAccuracy: "",
 
     assessmentStrategy: "",
     assessmentStrategyRevealLatency: "",
     assessmentStrategyMoveOnLatency: "",
-    assessmentTestUserInput: "",
-    assessmentTestAccuracy: ""
   });
 }
 
@@ -383,14 +392,14 @@ var experiment = {
   assessmentTestTrials: shuffle(assessmentTrials.slice(0)),
 
   /* aggregate scores and outcomes */
-  interventionRestudyStrategyScoreRound1: 0,
-  interventionGenerateStrategyScoreRound1: 0,
-  interventionRestudyStrategyScoreRound2: 0,
-  interventionGenerateStrategyScoreRound2: 0,
+  interventionStrategyRestudyScoreRound1: 0,
+  interventionStrategyGenerateScoreRound1: 0,
+  interventionStrategyRestudyScoreRound2: 0,
+  interventionStrategyGenerateScoreRound2: 0,
   predictionRestudy: -1,
   predictionGenerate: -1,
-  interventionRestudyTestScore: 0,
-  interventionGenerateTestScore: 0,
+  interventionTestRestudyScore: 0,
+  interventionTestGenerateScore: 0,
   interventionStudyOrderCounter: 0,
   interventionStrategyOrderCounter: 0,
   interventionTestOrderCounter: 0,
@@ -497,9 +506,9 @@ var experiment = {
     if (round == 1) {
       var trials = experiment.interventionStrategyTrials1;
       if (trials.length == 0) {
-        updateUserStrategyTotals(experiment.prolificId, round, 
-          experiment.interventionRestudyStrategyScoreRound1, 
-          experiment.interventionGenerateStrategyScoreRound1);
+        updateUserStrategyScores(experiment.prolificId, round, 
+          experiment.interventionStrategyRestudyScoreRound1, 
+          experiment.interventionStrategyGenerateScoreRound1);
         if (numStrategyRounds == 1){experiment.interventionPredict();
         } else if (numStrategyRounds == 2) {experiment.interventionStrategyFraming(2);
         } return;
@@ -507,9 +516,9 @@ var experiment = {
     } else if (round == 2) {
       var trials = experiment.interventionStrategyTrials2;
       if (trials.length == 0) {
-        updateUserStrategyTotals(experiment.prolificId, round, 
-          experiment.interventionRestudyStrategyScoreRound2, 
-          experiment.interventionGenerateStrategyScoreRound2);
+        updateUserStrategyScores(experiment.prolificId, round, 
+          experiment.interventionStrategyRestudyScoreRound2, 
+          experiment.interventionStrategyGenerateScoreRound2);
         experiment.interventionPredict(); return;
       } 
     }
@@ -566,9 +575,9 @@ var experiment = {
       experiment.interventionGenerateFeedback(round, swahili, english, accuracy);
     } else if (strategy == "restudy"){
       if (round == 1){
-        experiment.interventionRestudyStrategyScoreRound1 += accuracy;
+        experiment.interventionStrategyRestudyScoreRound1 += accuracy;
       } else if (round == 2) {
-        experiment.interventionRestudyStrategyScoreRound2 += accuracy;
+        experiment.interventionStrategyRestudyScoreRound2 += accuracy;
       }
       experiment.interventionStrategy(round);
     } 
@@ -696,9 +705,9 @@ var experiment = {
       secondPrediction = parseInt($("#secondPrediction").val()),
       firstPredictionReason = $("#firstPredictionReason").val(),
       secondPredictionReason = $("#secondPredictionReason").val();
-    if (!( firstPrediction >= 0 & firstPrediction <= 10 &
-          secondPrediction >= 0 & secondPrediction <= 10)){
-      alert("Please make a prediction from 0 to 10");
+    if (!( firstPrediction >= 0 & firstPrediction <= experiment.numTrials/4 &
+          secondPrediction >= 0 & secondPrediction <= experiment.numTrials/4)){
+      alert(`Please make a prediction from 0 to ${experiment.numTrials/4}`);
       return false; 
     } else { 
       experiment.capturePrediction(firstPrediction, firstPredictionReason,
@@ -775,7 +784,13 @@ var experiment = {
 
   interventionTest: function(){
     var trials = experiment.interventionTestTrials;
-    if (trials.length == 0) {experiment.interventionFeedback(); return;} 
+    if (trials.length == 0) {
+      updateUserInterventionTestScores(experiment.prolificId, 
+        experiment.interventionTestRestudyScore, 
+        experiment.interventionTestGenerateScore);
+      experiment.interventionFeedback(); 
+      return;
+    } 
 
     // Get the current trial - <code>shift()</code> removes the first element of the array and returns it.
     var currItem = parseInt(trials.shift()),
@@ -810,15 +825,13 @@ var experiment = {
       accuracy = english == userInput ? 1 : 0;
 
     if (generateItem){
-      console.log("generate item");
-        experiment.interventionGenerateTestScore += accuracy;
-      } else if (restudyItem){
-              console.log("restudy item");
-        experiment.interventionRestudyTestScore += accuracy;
-      } 
-      experiment.interventionTest();
-      updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
-      // experiment.interventionTestData.push(data);
+        experiment.interventionTestGenerateScore += accuracy;
+    } else if (restudyItem){
+      experiment.interventionTestRestudyScore += accuracy;
+    } 
+    experiment.interventionTest();
+    updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
+    // experiment.interventionTestData.push(data);
   },
   /*
   No strategy feedback: summative performance outcome
@@ -831,11 +844,12 @@ var experiment = {
   */
   interventionFeedback: function() {
     
-    var text = `You scored ${experiment.interventionGenerateTestScore + experiment.interventionRestudyTestScore} / ${experiment.numTrials/2}.`
+    var text = `You scored ${experiment.interventionTestGenerateScore + experiment.interventionTestRestudyScore} / ${experiment.numTrials/2}.`
     var restudyFeedbackText = `On the items that you studied by <b>reviewing</b> the Swahili-English word pair, you scored 
-    ${experiment.interventionRestudyTestScore}/${experiment.numTrials/4}.`
+    ${experiment.interventionTestRestudyScore}/${experiment.numTrials/4}.`
     var generateFeedbackText = `On the items that you studied by trying to <b>recall</b> the 
-    English translation from memory, you scored ${experiment.interventionGenerateTestScore}/${experiment.numTrials/4}.`
+    English translation from memory, you scored ${experiment.interventionTestGenerateScore}/${experiment.numTrials/4}.`
+
 
     if (predictRestudyFirst) {
       var firstFeedbackText = restudyFeedbackText;
