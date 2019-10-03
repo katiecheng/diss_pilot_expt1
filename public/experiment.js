@@ -1066,6 +1066,24 @@ var experiment = {
     updateUserEndDateTime(experiment.prolificId, endDateTime);
     // Show the finish slide.
     showSlide("end");
+    $("#redirectButton").click(function(){$(this).blur(); experiment.redirect();});
     // Wait 1.5 seconds and then execute function
+  },
+
+  redirect: function() {
+    var comments = $("#comments").val();
+    updateUserComments(experiment.prolificId, comments);
+    window.location.replace("https://app.prolific.co/submissions/complete?cc=NT1G43OG");
+  },
+
+  doesNotConsent: function() {
+    showSlide("doesNotConsent");
+    $("#noConsentCommentsButton").click(function(){$(this).blur(); experiment.endNoConsent();});
+  },
+
+  endNoConsent: function() {
+    var comments = $("#noConsentComments").val();
+    updateUserComments(experiment.prolificId, comments);
+    showSlide("thankyou");
   }
 }

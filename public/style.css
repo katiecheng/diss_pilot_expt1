@@ -66,8 +66,9 @@ input[type=number] {
 /* ## Experiment-specific styles */
 /* This stuff will vary by experiment. */
 
-#logo-text {
+.logo-text {
   font-weight: bold;
+  text-align: center;
 }
 
 #instructionsLatency {
