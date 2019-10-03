@@ -437,16 +437,17 @@ var experiment = {
 
   //Intro to study
   interventionStudyFraming: function() { 
-    var header = "Word Pairs";
-    var text = "In a moment, you will be presented with 20 Swahili words paired with \
+    var header = "Round 1: Presentation phase";
+    var text1 = "In a moment, you will be presented with 20 Swahili words paired with \
     their English translations. You will see each Swahili-English word pair \
     for 5 seconds, and then the screen will automatically advance to the \
-    next pair. Please pay attention, and study each pair so you can type \
-    the English translation given the Swahili word. \
-    <br><br>Please make sure you understand these instructions before you begin.";
+    next pair. Pay attention, and study each pair so you can type \
+    the English translation given the Swahili word."
+    var text2 = "Please make sure you understand these instructions before you begin.";
     showSlide("textNext");
     $("#instructionsHeader").text(header);
-    $("#instructionsText").text(text);
+    $("#instructionsText1").text(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionStudy();});
     console.log($("#instructionsText").text());
   },
@@ -480,17 +481,18 @@ var experiment = {
   interventionStrategyFraming: function(round) {
     if (round == 1) {
       /* Toggle for one or two strategy rounds */
-      var header = "Study Strategies";
+      var header = "Round 1: Learning phase";
       // var header = "Study - Round 1";
-      var text = "Now you will be asked to study each Swahili-English word pair either by (1) \
+      var text1 = "Now you will be asked to study each Swahili-English word pair either by (1) \
                 reviewing the English translation by copying it into the textbox, or (2) trying to \
                 recall the English translation from memory. After 5 seconds, \
                 the screen will automatically advance and save your input. For the cases that you \
                 try to recall the translation from memory, you will get to see the correct answer. If you were \
                 correct, the answer will be green, if incorrect, the answer will be red.";
+      var text2 = "Please make sure you understand these instructions before you begin."
     } else if (round == 2) {
-      var header = "Study Strategies - Round 2";
-      var text = "Now, you will be asked to study each Swahili-English word pair again, \
+      var header = "Round 1: Learning phase, repeated";
+      var text1 = "Now, you will be asked to study each Swahili-English word pair again, \
                 either by (1) \
                 reviewing the English translation by copying it into the textbox, or (2) trying to \
                 recall the English translation from memory. For each word pair, if you copied \
@@ -499,10 +501,12 @@ var experiment = {
                 the screen will automatically advance and save your input. For the cases that you \
                 try to recall the translation from memory, you will get to see the correct answer. If you were \
                 correct, the answer will be green, if incorrect, the answer will be red.";
+      var text2 = "Please make sure you understand these instructions before you begin."
     }
     showSlide("textNext");
     $("#instructionsHeader").text(header);
-    $("#instructionsText").text(text);
+    $("#instructionsText1").text(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionStrategy(round);});
     console.log($("#instructionsText").text());
   },
@@ -683,13 +687,15 @@ var experiment = {
   correct English translation.”
   */
   interventionTestFraming: function() {
-    var header = "Quiz"
-    var text = "Let's see what you learned! Next, you will be shown each Swahili word again.\
+    var header = "Round 1: Quiz phase"
+    var text1 = "Let's see what you learned! Next, you will be shown each Swahili word again.\
       You’ll have 5 seconds to type the correct English translation. After 5 seconds,\
       the screen will automatically advance and save your input."
+    var text2 = "Please make sure you understand these instructions before you begin."
     showSlide("textNext");
     $("#instructionsHeader").text(header);
-    $("#instructionsText").text(text);
+    $("#instructionsText1").text(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionTest();});
     console.log($("#instructionsText").text());
   },
@@ -784,31 +790,35 @@ var experiment = {
   },
 
   assessmentFraming: function() {
-    var header = "Second half";
-    var text = "Congrats! You have completed the first half of the activity. \
+    var header = "Round 2";
+    var text1 = "Congrats! You have completed the first half of the activity. \
     Now, you will learn the second set of 20 Swahili-English word pairs. \
-    You will go through the same 3 stages of (1) seeing the word pairs, \
-    (2) applying study strategies, and (3) taking a short quiz. \
-    <br><br>This time, you will be free to apply whatever study strategies you choose.";
+    You will go through the same 3 phases: (1) Presentation phase, \
+    (2) Learning phase, and (3) Quiz phase."
+    var text2 = "This time, the Learning phase is self-paced. For each Swahili word, \
+    you will be able to check the English translation and move on to the next word \
+    at the pace you choose.";
     showSlide("textNext");
     $("#instructionsHeader").text(header);
-    $("#instructionsText").html(text);
+    $("#instructionsText1").html(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudyFraming();});
     // console.log($("#instructionsText").text());
   },
 
   // intro to assessment study
   assessmentStudyFraming: function() {
-    var header = "Word Pairs";
-    var text = "In a moment, you will be presented with 20 Swahili words paired with \
+    var header = "Round 2: Presentation phase";
+    var text1 = "In a moment, you will be presented with 20 Swahili words paired with \
     their English translations. You will see each Swahili-English word pair \
     for 5 seconds, and then the screen will automatically advance to the \
-    next pair. Please pay attention, and study the pair so you can type \
-    the English translation given the Swahili word.\
-    <br><br>Please make sure you understand these instructions before you begin.";
+    next pair. Pay attention, and study the pair so you can type \
+    the English translation given the Swahili word.";
+    var text2 = "Please make sure you understand these instructions before you begin."
     showSlide("textNext");
     $("#instructionsHeader").text(header);
-    $("#instructionsText").html(text);
+    $("#instructionsText1").html(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudy();});
     console.log($("#instructionsText").text());
   },
@@ -838,12 +848,13 @@ var experiment = {
   },
 
   assessmentStrategyFraming: function() {
-    var header = "Study Strategies";
-    var text = "Next, you will study the 20 Swahili-English word pairs. \
+    var header = "Round 2: Learning phase";
+    var text1 = "Next, you will study the 20 Swahili-English word pairs. \
     For each pair, you will be shown the Swahili word. You can click 'See Translation' \
     to see the English Translation. Then, you can click 'Move On' to move on to the \
     next word pair. If you don't click the buttons, the screens will automatically \
     advance after 5 seconds."
+    var text2 = "Please make sure you understand these instructions before you begin."
     /*var text = "Next, you will study the 20 Swahili-English word pairs. \
     For each pair, you will be shown the Swahili word. You can click 'See Translation' \
     to see the English Translation. Then, you can click 'Move On' to move on to the \
@@ -853,7 +864,8 @@ var experiment = {
     different study strategy for each set."*/
     showSlide("textNext");
     $("#instructionsHeader").html(header);
-    $("#instructionsText").html(text);
+    $("#instructionsText1").html(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); 
       experiment.assessmentStrategyLatencyReveal("assessmentChoice");});
   },
@@ -1002,13 +1014,15 @@ var experiment = {
   correct English translation.”
   */
   assessmentTestFraming: function() {
-    var header = "Quiz"
-    var text = "Let's see what you learned! Next, you will be shown each Swahili word again.\
+    var header = "Round 2: Quiz phase"
+    var text1 = "Let's see what you learned! Next, you will be shown each Swahili word again.\
       You’ll have 5 seconds to type the correct English translation. After 5 seconds,\
       the screen will automatically advance and save your input."
+    var text2 = "Please make sure you understand these instructions before you begin."
     showSlide("textNext");
     $("#instructionsHeader").text(header);
-    $("#instructionsText").text(text);
+    $("#instructionsText1").text(text1);
+    $("#instructionsText2").text(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentTest();});
   },
 
