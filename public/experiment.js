@@ -288,8 +288,8 @@ var numTrials = 4,
   numStrategyRounds = 1,
   /* toggle number of conditions */
   // condition = randomInteger(4), // 2x2
-  // condition = randomInteger(2), // expt vs. control
-  condition = 2, // fixed to expt?
+  condition = randomInteger(2), // 1 expt vs. 0 control
+  // condition = 2, // fixed to expt?
   /* toggle intervention prediction order */
   predictRestudyFirst = randomInteger(2), // 1 or 0
   myTrialOrder = shuffle([...Array(numTrials).keys()]),
@@ -410,6 +410,8 @@ var experiment = {
   interventionStrategyGenerateScoreRound2: 0,
   predictionRestudy: -1,
   predictionGenerate: -1,
+  predictionRestudyReason: "",
+  predictionGenerateReason: "",
   interventionTestOrderCounter: 0,
   interventionTestRestudyScore: 0,
   interventionTestGenerateScore: 0,
@@ -450,7 +452,7 @@ var experiment = {
     $("#instructionsText1").html(text1);
     $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionStudy();});
-    console.log($("#instructionsText").html());
+    // console.log($("#instructionsText").html());
   },
 
   // 20 items, View each item for 5 sec
@@ -528,13 +530,13 @@ var experiment = {
     $("#instructionsText1").html(text1replaced);
     $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionStrategy(round);});
-    console.log($("#instructionsText1").html());
+    // console.log($("#instructionsText1").html());
   },
 
   //Apply strategy to each item for 5 sec 1/2 copy 1/2 generate (randomize)
   interventionStrategy: function(round) {
-    console.log("interventionStrategyTrials1: ", experiment.interventionStrategyTrials1);
-    console.log("interventionStrategyTrials2: ", experiment.interventionStrategyTrials2);
+    // console.log("interventionStrategyTrials1: ", experiment.interventionStrategyTrials1);
+    // console.log("interventionStrategyTrials2: ", experiment.interventionStrategyTrials2);
     if (round == 1) {
       var trials = experiment.interventionStrategyTrials1;
       if (trials.length == 0) {
@@ -560,9 +562,9 @@ var experiment = {
       generateItem = ($.inArray(currItem, experiment.interventionGenerateTrials) != -1),
       restudyItem = ($.inArray(currItem, experiment.interventionRestudyTrials) != -1);
 
-    console.log(currItem);
-    console.log(swahili);
-    console.log(english);
+    // console.log(currItem);
+    // console.log(swahili);
+    // console.log(english);
 
     experiment.interventionStrategyOrderCounter += 1;
     updateItemStrategyOrderData(experiment.prolificId, currItem, experiment.interventionStrategyOrderCounter);
@@ -600,7 +602,7 @@ var experiment = {
       var userInput = $("#restudiedWord").val().toLowerCase();
     }
 
-    console.log(userInput)
+    // console.log(userInput)
     
     var accuracy = english == userInput ? 1 : 0;
 
@@ -696,6 +698,10 @@ var experiment = {
         predictGenerate = firstPrediction,
         predictGenerateReason = firstPredictionReason;
     }
+    experiment.predictionRestudy = predictRestudy;
+    experiment.predictionGenerate = predictGenerate;
+    experiment.predictionRestudyReason = predictRestudyReason;
+    experiment.predictionGenerateReason = predictGenerateReason;
     updateUserPredictions(experiment.prolificId, predictRestudy, predictRestudyReason,
       predictGenerate, predictGenerateReason);
     experiment.interventionTestFraming();
@@ -717,7 +723,7 @@ var experiment = {
     $("#instructionsText1").html(text1);
     $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionTest();});
-    console.log($("#instructionsText").html());
+    // console.log($("#instructionsText").html());
   },
 
   interventionTest: function(){
@@ -726,7 +732,13 @@ var experiment = {
       updateUserInterventionTestScores(experiment.prolificId, 
         experiment.interventionTestRestudyScore, 
         experiment.interventionTestGenerateScore);
-      experiment.interventionFeedback(); 
+      if (experiment.condition){
+        // experiment.controlFeedback();
+        experiment.interventionFeedback(); 
+      } else {
+        experiment.controlFeedback();
+        // experiment.interventionFeedback(); 
+      }
       return;
     } 
 
@@ -735,9 +747,9 @@ var experiment = {
       swahili = swahili_english_pairs[currItem][0],
       english = swahili_english_pairs[currItem][1];
 
-    console.log(currItem);
-    console.log(swahili);
-    console.log(english);
+    // console.log(currItem);
+    // console.log(swahili);
+    // console.log(english);
 
     experiment.interventionTestOrderCounter += 1;
     updateItemTestOrderData(experiment.prolificId, currItem, experiment.interventionTestOrderCounter);
@@ -765,7 +777,7 @@ var experiment = {
       restudyItem = ($.inArray(currItem, experiment.interventionRestudyTrialsSave) != -1),
       accuracy = english == userInput ? 1 : 0;
 
-    console.log(userInput)
+    // console.log(userInput)
     
     if (generateItem){
         experiment.interventionTestGenerateScore += accuracy;
@@ -775,6 +787,16 @@ var experiment = {
     experiment.interventionTest();
     updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
     // experiment.interventionTestData.push(data);
+  },
+  
+  controlFeedback: function(){
+    var text = `Overall, you scored ${experiment.interventionTestGenerateScore + experiment.interventionTestRestudyScore} / ${experiment.numTrials/2} on the quiz.`
+    
+    showSlide("feedbackNext");
+    $("#feedbackText").html(text);
+    $("#firstFeedbackText").html("");
+    $("#secondFeedbackText").html("");
+    $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentFraming()});
   },
   /*
   No strategy feedback: summative performance outcome
@@ -787,19 +809,38 @@ var experiment = {
   */
   interventionFeedback: function() {
     
-    var text = `You scored ${experiment.interventionTestGenerateScore + experiment.interventionTestRestudyScore} / ${experiment.numTrials/2}.`
-    var restudyFeedbackText = `On the items that you studied by <b>reviewing</b> the Swahili-English word pair, you scored 
-    ${experiment.interventionTestRestudyScore}/${experiment.numTrials/4}.`
-    var generateFeedbackText = `On the items that you studied by trying to <b>recall</b> the 
-    English translation from memory, you scored ${experiment.interventionTestGenerateScore}/${experiment.numTrials/4}.`
+    var text = `Overall, you scored ${experiment.interventionTestGenerateScore + experiment.interventionTestRestudyScore} / ${experiment.numTrials/2} on the quiz.`
+    var restudyFeedbackText = "On the items that you studied by <b>reviewing</b> the English translation by copying it into a textbox... \
+    <ul>\
+    <li>You predicted that you would score predictionRestudy/numTrialsDiv4.</li> \
+    <li>The reason you provided for this prediction was: predictionRestudyReason</li>\
+    <li>Your <u>actual score</u> when studying by <b>reviewing</b> was interventionTestRestudyScore/numTrialsDiv4.</li>\
+    </ul>"
+    var restudyFeedbackTextReplaced = restudyFeedbackText.replace(
+      "predictionRestudy", experiment.predictionRestudy).replace(
+      /numTrialsDiv4/g, experiment.numTrials/4).replace(
+      "predictionRestudyReason", experiment.predictionRestudyReason).replace(
+      "interventionTestRestudyScore", experiment.interventionTestRestudyScore)
+    var generateFeedbackText = "On the items that you studied by <b>recalling</b> the \
+    English translation from memory...\
+    <ul>\
+    <li>You predicted that you would score predictionGenerate/numTrialsDiv4.</li> \
+    <li>The reason you provided for this prediction was: predictionGenerateReason</li>\
+    <li>Your <u>actual score</u> when studying by <b>recalling</b> was interventionTestGenerateScore/numTrialsDiv4.</li>\
+    </ul>"
+    var generateFeedbackTextReplaced = generateFeedbackText.replace(
+      "predictionGenerate", experiment.predictionGenerate).replace(
+      /numTrialsDiv4/g, experiment.numTrials/4).replace(
+      "predictionGenerateReason", experiment.predictionGenerateReason).replace(
+      "interventionTestGenerateScore", experiment.interventionTestGenerateScore)
 
 
     if (experiment.predictRestudyFirst) {
-      var firstFeedbackText = restudyFeedbackText;
-      var secondFeedbackText = generateFeedbackText;
+      var firstFeedbackText = restudyFeedbackTextReplaced;
+      var secondFeedbackText = generateFeedbackTextReplaced;
     } else {
-      var firstFeedbackText = generateFeedbackText;
-      var secondFeedbackText = restudyFeedbackText;
+      var firstFeedbackText = generateFeedbackTextReplaced;
+      var secondFeedbackText = restudyFeedbackTextReplaced;
     }
     
     showSlide("feedbackNext");
@@ -840,7 +881,7 @@ var experiment = {
     $("#instructionsText1").html(text1);
     $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudy();});
-    console.log($("#instructionsText").html());
+    // console.log($("#instructionsText").html());
   },
 
   // 20 items, View each item for 5 sec
@@ -1059,9 +1100,9 @@ var experiment = {
       swahili = swahili_english_pairs[currItem][0],
       english = swahili_english_pairs[currItem][1];
 
-    console.log(currItem);
-    console.log(swahili);
-    console.log(english);
+    // console.log(currItem);
+    // console.log(swahili);
+    // console.log(english);
 
     experiment.assessmentTestOrderCounter += 1;
     updateItemTestOrderData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter);
@@ -1085,7 +1126,7 @@ var experiment = {
     var userInput = $("#testedWord").val().toLowerCase(),
       accuracy = english == userInput ? 1 : 0;
 
-    console.log(userInput)
+    // console.log(userInput)
 
     experiment.assessmentTestScore += accuracy;
     experiment.assessmentTest();
@@ -1120,4 +1161,4 @@ var experiment = {
   }
 }
 
-experiment.interventionStrategyFraming(1);
+experiment.interventionTest();
