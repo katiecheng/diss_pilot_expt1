@@ -374,6 +374,7 @@ var experiment = {
   myTrialOrder: myTrialOrder, // already shuffled
   trialDuration: trialDuration,
   feedbackDuration: feedbackDuration,
+  predictRestudyFirst: predictRestudyFirst,
 
   /* interventionTrials is the first half of myTrialOrder */
   interventionStudyTrials: shuffle(interventionTrials.slice(0)), // study order
@@ -445,11 +446,11 @@ var experiment = {
     the English translation given the Swahili word."
     var text2 = "Please make sure you understand these instructions before you begin.";
     showSlide("textNext");
-    $("#instructionsHeader").text(header);
-    $("#instructionsText1").text(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsHeader").html(header);
+    $("#instructionsText1").html(text1);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionStudy();});
-    console.log($("#instructionsText").text());
+    console.log($("#instructionsText").html());
   },
 
   // 20 items, View each item for 5 sec
@@ -473,24 +474,41 @@ var experiment = {
     wait4.innerHTML = "";
     showSlide("study");
 
-    $("#wordpair").text(swahili + " : " + english);
+    $("#wordpair").html(swahili + " : " + english);
     setTimeout(function(){experiment.interventionStudy()}, trialDuration);
   },
 
   //Intro to strategy
   interventionStrategyFraming: function(round) {
+    if (experiment.predictRestudyFirst){
+      // predict restudy first, then predict generate
+      var firstStratText = "<b>Reviewing</b> the English translation by copying it into a textbox";
+      var secondStratText = "<b>Recalling</b> the English translation from memory";
+    } else {
+      // predict generate first, then predict restudy
+      var firstStratText = "<b>Recalling</b> the English translation from memory";
+      var secondStratText = "<b>Reviewing</b> the English translation by copying it into a textbox";
+    }
     if (round == 1) {
       /* Toggle for one or two strategy rounds */
       var header = "Round 1: Learning phase";
       // var header = "Study - Round 1";
-      var text1 = "Now you will be asked to study each Swahili-English word pair either by (1) \
-                reviewing the English translation by copying it into the textbox, or (2) trying to \
-                recall the English translation from memory. After 5 seconds, \
-                the screen will automatically advance and save your input. For the cases that you \
-                try to recall the translation from memory, you will get to see the correct answer. If you were \
-                correct, the answer will be green, if incorrect, the answer will be red.";
+      var text1 = "Now you will be asked to study each Swahili-English word pair either by:\
+                <ol>\
+                <li>firstStratText</li>\
+                <li>secondStratText</li>\
+                </ol>\
+                After 5 seconds, the screen will automatically advance and save your input. \
+                <br><br>\
+                For the cases that you try to <b>recall</b> the translation from memory, \
+                you will get to see the correct answer at the end of the 5 seconds. \
+                If you were correct, the answer will be shown in <b><font color='green'>green</font></b>, \
+                if incorrect, the answer will be shown in <b><font color='red'>red</font></b>.";
+      var text1replaced = text1.replace(
+        "firstStratText", firstStratText).replace(
+        "secondStratText", secondStratText);
       var text2 = "Please make sure you understand these instructions before you begin."
-    } else if (round == 2) {
+    } else if (round == 2) { //TODO update formatting
       var header = "Round 1: Learning phase, repeated";
       var text1 = "Now, you will be asked to study each Swahili-English word pair again, \
                 either by (1) \
@@ -499,16 +517,18 @@ var experiment = {
                 in the first study round, you will be asked to copy again; if you tried to recall in the \
                 first study round, you will be asked to recall again. After 5 seconds,\
                 the screen will automatically advance and save your input. For the cases that you \
-                try to recall the translation from memory, you will get to see the correct answer. If you were \
-                correct, the answer will be green, if incorrect, the answer will be red.";
+                try to recall the translation from memory, you will get to see the correct answer. \
+                If you were correct, the answer will be <b><font color='green'>green</font></b>, \
+                if incorrect, the answer will be <b><font color='red'>red</font></b>.";
       var text2 = "Please make sure you understand these instructions before you begin."
     }
     showSlide("textNext");
-    $("#instructionsHeader").text(header);
-    $("#instructionsText1").text(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsHeader").html(header);
+    // $("#instructionsText1").html(text1);
+    $("#instructionsText1").html(text1replaced);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionStrategy(round);});
-    console.log($("#instructionsText").text());
+    console.log($("#instructionsText1").html());
   },
 
   //Apply strategy to each item for 5 sec 1/2 copy 1/2 generate (randomize)
@@ -554,7 +574,7 @@ var experiment = {
     if (generateItem) {
       experiment.interventionGenerateTrialsSave.push(currItem);
       showSlide("generate");
-      $("#swahili").text(swahili + " : ");
+      $("#swahili").html(swahili + " : ");
       $("#generatedWord").val('');
       $("#generatedWord").focus();
       setTimeout(function(){
@@ -563,8 +583,8 @@ var experiment = {
     } else if (restudyItem) {
       experiment.interventionRestudyTrialsSave.push(currItem);
       showSlide("restudy");
-      $("#restudyWordpair").text(swahili + " : " + english);
-      $("#restudySwahili").text(swahili + " : ");
+      $("#restudyWordpair").html(swahili + " : " + english);
+      $("#restudySwahili").html(swahili + " : ");
       $("#restudiedWord").val('');
       $("#restudiedWord").focus();
       setTimeout(function(){
@@ -606,7 +626,7 @@ var experiment = {
   //show feedback
   interventionGenerateFeedback: function(round, swahili, english, accuracy) {
     $("#feedback").show();
-    $("#feedback").text(swahili + " : " + english);
+    $("#feedback").html(swahili + " : " + english);
     if (accuracy == 1){
       $("#feedback").css("color", "green");
     } else {
@@ -629,7 +649,7 @@ var experiment = {
     from memory. Out of these ${experiment.numTrials/4}, how many English translations do you 
     think you’ll remember on the quiz?`;
     
-    if (predictRestudyFirst){
+    if (experiment.predictRestudyFirst){
       // predict restudy first, then predict generate
       var firstPredictionText = restudyPredictionText;
       var secondPredictionText = generatePredictionText;
@@ -665,7 +685,7 @@ var experiment = {
 
   capturePrediction: function(firstPrediction, firstPredictionReason,
     secondPrediction, secondPredictionReason) {
-    if (predictRestudyFirst){
+    if (experiment.predictRestudyFirst){
       var predictRestudy = firstPrediction,
         predictRestudyReason = firstPredictionReason,
         predictGenerate = secondPrediction,
@@ -693,11 +713,11 @@ var experiment = {
       the screen will automatically advance and save your input."
     var text2 = "Please make sure you understand these instructions before you begin."
     showSlide("textNext");
-    $("#instructionsHeader").text(header);
-    $("#instructionsText1").text(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsHeader").html(header);
+    $("#instructionsText1").html(text1);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.interventionTest();});
-    console.log($("#instructionsText").text());
+    console.log($("#instructionsText").html());
   },
 
   interventionTest: function(){
@@ -727,7 +747,7 @@ var experiment = {
     wait3.innerHTML = "";
     wait4.innerHTML = "";
     showSlide("test");
-    $("#swahiliTest").text(swahili + " : ");
+    $("#swahiliTest").html(swahili + " : ");
     $("#testedWord").val('');
     $("#testedWord").focus();
 
@@ -774,7 +794,7 @@ var experiment = {
     English translation from memory, you scored ${experiment.interventionTestGenerateScore}/${experiment.numTrials/4}.`
 
 
-    if (predictRestudyFirst) {
+    if (experiment.predictRestudyFirst) {
       var firstFeedbackText = restudyFeedbackText;
       var secondFeedbackText = generateFeedbackText;
     } else {
@@ -799,11 +819,11 @@ var experiment = {
     you will be able to check the English translation and move on to the next word \
     at the pace you choose.";
     showSlide("textNext");
-    $("#instructionsHeader").text(header);
+    $("#instructionsHeader").html(header);
     $("#instructionsText1").html(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudyFraming();});
-    // console.log($("#instructionsText").text());
+    // console.log($("#instructionsText").html());
   },
 
   // intro to assessment study
@@ -816,11 +836,11 @@ var experiment = {
     the English translation given the Swahili word.";
     var text2 = "Please make sure you understand these instructions before you begin."
     showSlide("textNext");
-    $("#instructionsHeader").text(header);
+    $("#instructionsHeader").html(header);
     $("#instructionsText1").html(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentStudy();});
-    console.log($("#instructionsText").text());
+    console.log($("#instructionsText").html());
   },
 
   // 20 items, View each item for 5 sec
@@ -843,7 +863,7 @@ var experiment = {
     wait3.innerHTML = "";
     wait4.innerHTML = "";
     showSlide("study");
-    $("#wordpair").text(swahili + " : " + english);
+    $("#wordpair").html(swahili + " : " + english);
     setTimeout(function(){experiment.assessmentStudy()}, trialDuration);
   },
 
@@ -865,7 +885,7 @@ var experiment = {
     showSlide("textNext");
     $("#instructionsHeader").html(header);
     $("#instructionsText1").html(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); 
       experiment.assessmentStrategyLatencyReveal("assessmentChoice");});
   },
@@ -963,8 +983,8 @@ var experiment = {
 
     // start, and get startTime for RT
     showSlide("choiceSeeTranslation");
-    $("#swahiliCue").text(swahili + " : ");
-    $("#englishAnswer").css("color", bgcolor).text(Array(english.length+1).join("x"));
+    $("#swahiliCue").html(swahili + " : ");
+    $("#englishAnswer").css("color", bgcolor).html(Array(english.length+1).join("x"));
     var startTime = (new Date()).getTime(),
       endTime = startTime + trialDuration;
 
@@ -988,8 +1008,8 @@ var experiment = {
 
     //capture the timeout in the next slide
     showSlide("choiceNextWordPair");
-    $("#swahiliCue2").text(swahili + " : ");
-    $("#englishAnswer2").text(english);
+    $("#swahiliCue2").html(swahili + " : ");
+    $("#englishAnswer2").html(english);
     var startTime = (new Date()).getTime(),
       endTime = startTime + trialDuration;
 
@@ -1020,9 +1040,9 @@ var experiment = {
       the screen will automatically advance and save your input."
     var text2 = "Please make sure you understand these instructions before you begin."
     showSlide("textNext");
-    $("#instructionsHeader").text(header);
-    $("#instructionsText1").text(text1);
-    $("#instructionsText2").text(text2);
+    $("#instructionsHeader").html(header);
+    $("#instructionsText1").html(text1);
+    $("#instructionsText2").html(text2);
     $("#nextButton").click(function(){$(this).blur(); experiment.assessmentTest();});
   },
 
@@ -1051,7 +1071,7 @@ var experiment = {
     wait3.innerHTML = "";
     wait4.innerHTML = "";
     showSlide("test");
-    $("#swahiliTest").text(swahili + " : ");
+    $("#swahiliTest").html(swahili + " : ");
     $("#testedWord").val('');
     $("#testedWord").focus();
 
@@ -1076,12 +1096,9 @@ var experiment = {
   // The function that gets called when the sequence is finished.
   end: function() {
     var endDateTime = new Date();
-    // updateUserComments(prolificId, comments) TODO
     updateUserEndDateTime(experiment.prolificId, endDateTime);
-    // Show the finish slide.
     showSlide("end");
     $("#redirectButton").click(function(){$(this).blur(); experiment.redirect();});
-    // Wait 1.5 seconds and then execute function
   },
 
   redirect: function() {
@@ -1090,6 +1107,7 @@ var experiment = {
     window.location.replace("https://app.prolific.co/submissions/complete?cc=NT1G43OG");
   },
 
+  // Called if the user does not consent at the beginning
   doesNotConsent: function() {
     showSlide("doesNotConsent");
     $("#noConsentCommentsButton").click(function(){$(this).blur(); experiment.endNoConsent();});
@@ -1101,3 +1119,5 @@ var experiment = {
     showSlide("thankyou");
   }
 }
+
+experiment.interventionStrategyFraming(1);
