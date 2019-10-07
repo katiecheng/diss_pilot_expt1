@@ -124,11 +124,12 @@ function validateProlificId() {
 // ## Interact with database
 
 // Create a new user, with all columns that will have to be populated
-function createNewUser(prolificId, startDateTime) {
+function createNewUser(prolificId, startDateTime, condition) {
   db.ref('users/' + prolificId).set({
     prolificId: prolificId,
     startDateTime: startDateTime.toISOString(),
     endDateTime: "", 
+    condition: condition,
 
     interventionPredictRestudy: "",
     interventionPredictRestudyReason: "",
@@ -278,7 +279,7 @@ function updateItemStrategyMoveOnData(prolificId, itemIndex, assessmentStrategy,
 }
 
 // ## Configuration settings
-var numTrials = 4,
+var numTrials = 40,
   /* test intervention with first numTrials items, in case need to re-test people */
   // numTrials = 20, // testing
   trialDuration = 5000,
@@ -425,7 +426,7 @@ var experiment = {
     if (validateProlificId()){
       experiment.prolificId = $("#prolificId").val();
       var startDateTime = new Date();
-      createNewUser(experiment.prolificId, startDateTime);
+      createNewUser(experiment.prolificId, startDateTime, experiment.condition);
       for (i=0; i<experiment.myTrialOrder.length; i++) {
         createNewItem(experiment.prolificId, 
           i,
@@ -911,9 +912,12 @@ var experiment = {
   assessmentStrategyFraming: function() {
     var header = "Round 2: Learning phase";
     var text1 = "Next, you will study the 20 Swahili-English word pairs. \
-    For each pair, you will be shown the Swahili word. You can click 'See Translation' \
-    to see the English Translation. Then, you can click 'Move On' to move on to the \
-    next word pair. If you don't click the buttons, the screens will automatically \
+    For each pair, you will be shown the Swahili word. \
+    <ul>\
+    <li>You can click 'See Translation' to see the English Translation.\
+    <li>Then, you can click 'Move On' to move on to the next word pair.</li>\
+    </ul>\
+    If you don't click the buttons, each screen will automatically \
     advance after 5 seconds."
     var text2 = "Please make sure you understand these instructions before you begin."
     /*var text = "Next, you will study the 20 Swahili-English word pairs. \
@@ -1160,5 +1164,3 @@ var experiment = {
     showSlide("thankyou");
   }
 }
-
-experiment.interventionTest();
