@@ -1,4 +1,5 @@
 import sys
+import json
 import pandas as pd
 
 
@@ -30,13 +31,37 @@ users_dict = data['users']
 
 df_items = pd.DataFrame.from_dict(items_dict, orient='index')
 df_users = pd.DataFrame.from_dict(users_dict, orient='index')
-# print(df_items).head(3)
-# print(df_users).head(3)
+
+### Drop items with NaN in itemIndex
+df_items_clean = df_items.dropna(subset=['itemIndex'])
+
+### reindex dfs
+df_items_reindex = df_items_clean.set_index(['prolificId', 'itemIndex'], drop=False)
+df_users_reindex = df_users.set_index(['prolificId'])
+
+### merge, keeping hierarchy
+df_users_items = df_items_reindex.join(df_users_reindex, how='inner')
+print(df_users_items)
+
+### User-level analysis file
+# make item level into a multindex (how does it decide which column is the top level?)
+# then merge on users/items prolificID
+# index: 
+# levels: (1) prolific id, (2) items 1-40
+# labels: encode the levels for each datapoint
+
+# df_items_multiindex = pd.MultiIndex.from_frame(df_items_reindex.head(1))
+# print(df_items_multiindex)
+
+
+
 
 ### Calculate summary stats in item-level data
 # average reveal latency on all trials, on correct trials, and on incorrect trials
 # average moveOn latency on all trials, on correct trials, and on incorrect trials
-# binary code predict-restudy, predict-generate, actual-restudy, actual-generate, match
+# binary code predict-restudy/generate, actual-restudy/generate, match-yes/no
+# numeric, difference in actual-predict for restudy and generate
+
 
 ### Link item-level data to user-level data
 
