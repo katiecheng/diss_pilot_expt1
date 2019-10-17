@@ -206,11 +206,11 @@ function createNewItem(prolificId, itemIndex, swahili, english) {
     itemSwahili: swahili,
     itemEnglish: english,
     
-    studyOrder: "",
-    strategyOrder: "",
-    testOrder: "",
-    testUserInput: "",
-    testAccuracy: "",
+    interventionStudyOrder: "",
+    interventionStrategyOrder: "",
+    interventionTestOrder: "",
+    interventionTestUserInput: "",
+    interventionTestAccuracy: "",
 
     interventionStrategy: "",
     interventionStrategyUserInputRound1: "",
@@ -218,28 +218,52 @@ function createNewItem(prolificId, itemIndex, swahili, english) {
     interventionStrategyUserInputRound2: "",
     interventionStrategyAccuracyRound2: "",
 
+    assessmentStudyOrder: "",
+    assessmentStrategyOrder: "",
+    assessmentTestOrder: "",
+    assessmentTestUserInput: "",
+    assessmentTestAccuracy: "",
+
     assessmentStrategy: "",
     assessmentStrategyRevealLatency: "",
     assessmentStrategyMoveOnLatency: "",
   });
 }
 
-function updateItemStudyOrderData(prolificId, itemIndex, studyOrder){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
-    studyOrder: studyOrder
-  });
+function updateItemStudyOrderData(prolificId, itemIndex, studyOrder, stage){
+  if (stage == "intervention") {
+    db.ref('items/' + prolificId + "_" + itemIndex).update({
+      interventionStudyOrder: studyOrder
+    });
+  } else if (stage == "assessment") {
+    db.ref('items/' + prolificId + "_" + itemIndex).update({
+      assessmentStudyOrder: studyOrder
+    });
+  }
 }
 
-function updateItemStrategyOrderData(prolificId, itemIndex, strategyOrder){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
-    strategyOrder: strategyOrder
-  });
+function updateItemStrategyOrderData(prolificId, itemIndex, strategyOrder, stage){
+  if (stage == "intervention") {
+    db.ref('items/' + prolificId + "_" + itemIndex).update({
+      interventionStrategyOrder: strategyOrder
+    });
+  } else if (stage == "assessment") {
+    db.ref('items/' + prolificId + "_" + itemIndex).update({
+      assessmentStrategyOrder: strategyOrder
+    });
+  }
 }
 
-function updateItemTestOrderData(prolificId, itemIndex, testOrder){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
-    testOrder: testOrder
-  });
+function updateItemTestOrderData(prolificId, itemIndex, testOrder, stage){
+    if (stage == "intervention") {
+      db.ref('items/' + prolificId + "_" + itemIndex).update({
+        interventionTestOrder: testOrder
+      });
+    } else if (stage == "assessment") {
+      db.ref('items/' + prolificId + "_" + itemIndex).update({
+        assessmentTestOrder: testOrder
+      });
+    }
 }
 
 function updateItemStrategyData(prolificId, itemIndex, interventionStrategy, round, userInput, accuracy){
@@ -257,17 +281,24 @@ function updateItemStrategyData(prolificId, itemIndex, interventionStrategy, rou
   }
 }
 
-function updateItemTestAccuracyData(prolificId, itemIndex, testAccuracy, userInput){
-  db.ref('items/' + prolificId + "_" + itemIndex).update({
-    testAccuracy: testAccuracy,
-    testUserInput: userInput
-  });
+function updateItemTestAccuracyData(prolificId, itemIndex, testAccuracy, userInput, stage){
+  if (stage == "intervention") {
+    db.ref('items/' + prolificId + "_" + itemIndex).update({
+      interventionTestAccuracy: testAccuracy,
+      interventionTestUserInput: userInput
+    });
+  } else if (stage == "assessment") {
+    db.ref('items/' + prolificId + "_" + itemIndex).update({
+      assessmentTestAccuracy: testAccuracy,
+      assessmentTestUserInput: userInput
+    });
+  }
 }
 
 function updateItemStrategyRevealData(prolificId, itemIndex, assessmentStrategy, revealLatency){
   db.ref('items/' + prolificId + "_" + itemIndex).update({
     assessmentStrategy: assessmentStrategy,
-    assessmentStrategyRevealLatency: revealLatency,
+    assessmentStrategyRevealLatency: revealLatency
   });
 }
 
@@ -279,7 +310,7 @@ function updateItemStrategyMoveOnData(prolificId, itemIndex, assessmentStrategy,
 }
 
 // ## Configuration settings
-var numTrials = 40,
+var numTrials = 4,
   /* test intervention with first numTrials items, in case need to re-test people */
   // numTrials = 20, // testing
   trialDuration = 5000,
@@ -469,7 +500,7 @@ var experiment = {
       english = swahili_english_pairs[currItem][1];
 
     experiment.interventionStudyOrderCounter += 1;
-    updateItemStudyOrderData(experiment.prolificId, currItem, experiment.interventionStudyOrderCounter);
+    updateItemStudyOrderData(experiment.prolificId, currItem, experiment.interventionStudyOrderCounter, "intervention");
 
     wait.innerHTML = "";
     wait2.innerHTML = "";
@@ -568,7 +599,7 @@ var experiment = {
     // console.log(english);
 
     experiment.interventionStrategyOrderCounter += 1;
-    updateItemStrategyOrderData(experiment.prolificId, currItem, experiment.interventionStrategyOrderCounter);
+    updateItemStrategyOrderData(experiment.prolificId, currItem, experiment.interventionStrategyOrderCounter, "intervention");
 
     wait.innerHTML = "";
     wait2.innerHTML = "";
@@ -753,7 +784,7 @@ var experiment = {
     // console.log(english);
 
     experiment.interventionTestOrderCounter += 1;
-    updateItemTestOrderData(experiment.prolificId, currItem, experiment.interventionTestOrderCounter);
+    updateItemTestOrderData(experiment.prolificId, currItem, experiment.interventionTestOrderCounter, "intervention");
 
     wait.innerHTML = "";
     wait2.innerHTML = "";
@@ -786,7 +817,7 @@ var experiment = {
       experiment.interventionTestRestudyScore += accuracy;
     } 
     experiment.interventionTest();
-    updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
+    updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput, "intervention");
     // experiment.interventionTestData.push(data);
   },
   
@@ -898,7 +929,7 @@ var experiment = {
       english = swahili_english_pairs[currItem][1];
 
     experiment.assessmentStudyOrderCounter += 1;
-    updateItemStudyOrderData(experiment.prolificId, currItem, experiment.assessmentStudyOrderCounter);
+    updateItemStudyOrderData(experiment.prolificId, currItem, experiment.assessmentStudyOrderCounter, "assessment");
 
     wait.innerHTML = "";
     wait2.innerHTML = "";
@@ -1016,7 +1047,7 @@ var experiment = {
 
     experiment.assessmentStrategyOrderCounter += 1;
     //experiment.assessmentData.strategyOrder[currItem] = experiment.assessmentStrategyOrderCounter;
-    updateItemStrategyOrderData(experiment.prolificId, currItem, experiment.assessmentStrategyOrderCounter);
+    updateItemStrategyOrderData(experiment.prolificId, currItem, experiment.assessmentStrategyOrderCounter, "assessment");
 
     if (stratType == "assessmentChoice") {
       experiment.assessmentChoiceTrialsSave.push(currItem);
@@ -1109,7 +1140,7 @@ var experiment = {
     // console.log(english);
 
     experiment.assessmentTestOrderCounter += 1;
-    updateItemTestOrderData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter);
+    updateItemTestOrderData(experiment.prolificId, currItem, experiment.assessmentTestOrderCounter, "assessment");
 
     wait.innerHTML = "";
     wait2.innerHTML = "";
@@ -1134,7 +1165,7 @@ var experiment = {
 
     experiment.assessmentTestScore += accuracy;
     experiment.assessmentTest();
-    updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput);
+    updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput, "assessment");
     // experiment.assessmentTestData.push(data);
   },
 
