@@ -309,8 +309,40 @@ function updateItemStrategyMoveOnData(prolificId, itemIndex, assessmentStrategy,
   });
 }
 
+function getCondition(){
+  var conditionsArray,
+    participantIndex,
+    condition;
+  var promise = db.ref('conditions/').once("value").then(function(snapshot){
+    var val = snapshot.val();
+
+    if (val) {
+      participantIndex = parseInt(val.participantIndex);
+      conditionsArray = val.conditionsArray;
+      if (participantIndex < conditionsArray.length-1){
+        condition = conditionsArray[participantIndex];
+      } else {
+        // just in case needed to add more participants beyond the generated list
+        condition = randomInteger(2);
+      }
+    } else {
+      // just in case conditions not generated, randomly assign a condition
+      condition = randomInteger(2);
+    }
+  });
+
+  promise.then(snapshot => {
+    console.log(conditionsArray, participantIndex, condition)
+    participantIndex++;
+    db.ref('conditions/').update({
+      participantIndex: participantIndex
+    });
+    return condition
+  });
+}
+
 // ## Configuration settings
-var numTrials = 4,
+var numTrials = 40, // full 40 items
   /* test intervention with first numTrials items, in case need to re-test people */
   // numTrials = 20, // testing
   trialDuration = 5000,
@@ -320,7 +352,7 @@ var numTrials = 4,
   numStrategyRounds = 1,
   /* toggle number of conditions */
   // condition = randomInteger(4), // 2x2
-  condition = randomInteger(2), // 1 expt vs. 0 control
+  condition = getCondition(), // 1 expt vs. 0 control
   // condition = 2, // fixed to expt?
   /* toggle intervention prediction order */
   predictRestudyFirst = randomInteger(2), // 1 or 0

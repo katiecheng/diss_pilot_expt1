@@ -1,0 +1,90 @@
+---
+title: "diss_pilot_expt1_analysis"
+author: "Katie"
+date: "10/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lme4)
+library(lmerTest) # p-values on lmer
+source("summarySE.R")
+library(corrplot)
+
+
+# differences in avgs btw groups
+# hierarchical: differences btw groups, controlling for participant
+```
+
+```{r import data}
+dir_proj <- here::here()
+dir_data <- fs::path(dir_proj, "data")
+
+df = read.csv(
+  fs::path(dir_data, "raw/2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
+  header=TRUE)
+
+```
+
+```{r wrangle data}
+# TODO drop rejected
+```
+
+## Research questions
+Everyone will predict that they do better with reread 
+(avg prediction reread, avg prediction generate)
+Split by #/% correct or incorrect on strategy, and/or relative performance on strategies A/B 
+```{r}
+# remove duplicates long data
+# interventionPredictRestudy
+# interventionPredictGenerate
+```
+
+
+In fact, everyone will do better with generate (interventionTest accuracy)
+```{r}
+
+```
+
+
+Expt vs. control
+Intervention folks will have longer reveal latency
+Split by later correct or incorrect
+shorter moveOn latency?
+Split by later correct or incorrect
+Better assessmentTest accuracy
+
+Expt-match-expectations vs. expt-nonmatch vs. control
+Would expect those who predicted the opposite to change the most
+Discrepancy
+Would expect those with bigger discrepancies to move more toward a generate (or restudy) profile
+
+(Expt vs. control, secondary analysis)
+Cluster response types, and compare # of each type in expt vs. control
+Taxonomy 1: short-short, short-long, long-short, long-long
+Taxonomy 2: clustering with k-means
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
