@@ -36,9 +36,6 @@
 rsconnect/
 .Rproj.user
 
-# large report files
-*.html
-
 ########## OUTPUT ##########
 
 # Data
