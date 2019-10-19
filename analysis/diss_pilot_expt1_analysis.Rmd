@@ -24,7 +24,7 @@ dir_proj <- here::here()
 dir_data <- fs::path(dir_proj, "data")
 
 df = read.csv(
-  fs::path(dir_data, "raw/2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
+  fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
   header=TRUE)
 
 ```
