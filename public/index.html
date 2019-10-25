@@ -5,7 +5,7 @@
   <!-- Add Firebase SDKs (software dev kit) from the CDN (content delivery network) -->
   <!-- (in the <head> tag of your page, before other script tags)  -->
   <!-- Do a partial import of products you need -->
-  <!-- Firebase core is always required and must be first -->
+  <!-- Firebase core is always and must be first -->
   <script src="/__/firebase/5.9.4/firebase-app.js"></script>
   <!-- Add additional services that you want to use -->
   <!-- Firebase Realtime Database -->
@@ -72,7 +72,7 @@
   <!-- <button type="button" onclick="this.blur(); experiment.assessmentStudyFraming();">Start</button> -->
   <button type="button" onclick="this.blur(); experiment.end();">End</button>
   <!-- <button type="button" onclick="this.blur(); experiment.assessmentChoiceFraming();">Start</button> -->
-  <!-- Legal blurb that we're required to show. -->
+  <!-- Legal blurb that we're to show. -->
   <!-- <p class="block-text" id="legal">Legal information: By answering the following questions, you are participating in a study being performed by researchers in the Stanford School of Education. If you have questions about this research, please contact Katie Cheng at <a href="mailto://katiemc@stanford.edu">katiemc@stanford.edu</a>. You must be at least 18 years old to participate. Your participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.</p> -->
 </div>
 
@@ -98,10 +98,10 @@
   </div>
   <!-- Button to start the experiment. <code>this.blur()</code> removes the focus from the button, if the user pressed the button by using the keyboard, rather than the mouse. -->
   <!-- <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button> -->
-  <button type="button" onclick="this.blur(); experiment.interventionStudyFraming();">Start</button>
+  <button type="button" onclick="this.blur(); experiment.interventionPredict();">Start</button>
   <button type="button" onclick="this.blur(); experiment.doesNotConsent();">End</button>
   <!-- <button type="button" onclick="this.blur(); experiment.assessmentChoiceFraming();">Start</button> -->
-  <!-- Legal blurb that we're required to show. -->
+  <!-- Legal blurb that we're to show. -->
   <p class="block-text" id="legal"> <b>Research Consent:</b> 
   <br>DESCRIPTION: You are invited to participate in a research study on people's behaviors while learning. We will collect data about how you click and interact with this website during the study. The data will only be used by us in ways that you agree to below. We will keep the data for approximately 10 years, after which point they will be destroyed. 
   <br>RISKS AND BENEFITS: There are no foreseeable risks associated with this study. There are also no benefits other than the chance to learn some new material.  We cannot and do not guarantee or promise that you will receive any benefits from this study. 
@@ -238,6 +238,55 @@
     <div style="text-align: center">
       <button type="button" id="nextWordPair">Move On</button>
     </div>
+  </div>
+</div>
+
+<!-- The questionnaire slide. -->
+<div class="slide" id="questionnaire">
+  <div class="block-text">
+    <h1>Tell us about your experience</h1>
+    <p> Next, we'll ask you a few questions about your experience with the study. Please be honest. Your responses to the following questions will not affect your participation or compensation.</p><br>
+    <form id="questionnaireForm" name="questionnaireForm" autocomplete="off"
+      onkeypress="return event.keyCode != 13;">
+      <h2>Question 1</h2>
+      <p id="firstQuestionText" class="block-text">{{}}</p>
+      <input type="radio" name="Q1" value="extremely">Extremely effective<br>
+      <input type="radio" name="Q1" value="very">Very effective<br>
+      <input type="radio" name="Q1" value="moderately">Moderately effective<br>
+      <input type="radio" name="Q1" value="slightly">Slightly effective<br>
+      <input type="radio" name="Q1" value="not">Not at all effective<br>
+      <br>
+      <h2>Question 2</h2>
+      <p id="secondQuestionText" class="block-text">{{}}</p>
+      <input type="radio" name="Q2" value="extremely">Extremely effective<br>
+      <input type="radio" name="Q2" value="very">Very effective<br>
+      <input type="radio" name="Q2" value="moderately">Moderately effective<br>
+      <input type="radio" name="Q2" value="slightly">Slightly effective<br>
+      <input type="radio" name="Q2" value="not">Not at all effective<br>
+      <br>
+      <h2>Question 3</h2>
+      <p>In the second round of learning Swahili-English word pairs, the 'Learning phase' was self-paced. You could click to 'See Translation' and 'Move On' at your own pace, and you could study using whatever strategy you chose. <br><br>As best you can, please describe the strategy you used.</p>
+      <textarea id="Q3" name="Q3" rows="5" style="width: 500px"></textarea>
+      <br><br>
+      <h2>Question 4</h2>
+      <p id="thirdQuestionText" class="block-text">In general, how effective is the strategy you described above?</p>
+      <input type="radio" name="Q4" value="extremely">Extremely effective<br>
+      <input type="radio" name="Q4" value="very">Very effective<br>
+      <input type="radio" name="Q4" value="moderately">Moderately effective<br>
+      <input type="radio" name="Q4" value="slightly">Slightly effective<br>
+      <input type="radio" name="Q4" value="not">Not at all effective<br>
+      <br>
+      <h2>Question 5</h2>
+      <p>Overall, how much effort did you put into your participation in this study?</p>
+      <input type="radio" name="Q5" value="greatDeal">A great deal of effort<br>
+      <input type="radio" name="Q5" value="lot">A lot of effort<br>
+      <input type="radio" name="Q5" value="moderateAmount">A moderate amount of effort<br>
+      <input type="radio" name="Q5" value="little">A little effort<br>
+      <input type="radio" name="Q5" value="none">No effort at all<br>
+      <div style="text-align: center">
+        <button type="button" id="questionnaireNextButton">Next</button>
+      </div>
+    </form>
   </div>
 </div>
 

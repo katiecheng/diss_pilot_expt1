@@ -332,13 +332,17 @@ function getCondition(){
   });
 
   promise.then(snapshot => {
-    console.log(conditionsArray, participantIndex, condition)
+    // console.log(conditionsArray, participantIndex, condition)
     participantIndex++;
     db.ref('conditions/').update({
       participantIndex: participantIndex
     });
     return condition
   });
+}
+
+function processUserInput(userInput){
+  return userInput.toLowerCase().trim().replace(/[!"#$%&'()*+,-.:;<=>?@^_`{|}~]/g,"")
 }
 
 // ## Configuration settings
@@ -425,7 +429,8 @@ var dots = window.setInterval( function() {
   }, 1000);
 
 // Show the instructions slide -- this is what we want subjects to see first.
-showSlide("getProlificId");
+// showSlide("getProlificId");
+showSlide("instructionsExpt");
 
 // ## The main event
 /* I implement the sequence as an object with properties and methods. The benefit of encapsulating everything in an object is that it's conceptually coherent (i.e. the <code>data</code> variable belongs to this particular sequence and not any other) and allows you to **compose** sequences to build more complicated experiments. For instance, if you wanted an experiment with, say, a survey, a reaction time test, and a memory test presented in a number of different orders, you could easily do so by creating three separate sequences and dynamically setting the <code>end()</code> function for each sequence so that it points to the next. **More practically, you should stick everything in an object and submit that whole object so that you don't lose data (e.g. randomization parameters, what condition the subject is in, etc). Don't worry about the fact that some of the object properties are functions -- mmturkey (the Turk submission library) will strip these out.*/
@@ -661,9 +666,9 @@ var experiment = {
 
   captureInterventionStrategyWord: function(strategy, round, currItem, swahili, english) {
     if (strategy == "generate"){
-      var userInput = $("#generatedWord").val().toLowerCase();
+      var userInput = processUserInput($("#generatedWord").val());
     } else if (strategy == "restudy"){
-      var userInput = $("#restudiedWord").val().toLowerCase();
+      var userInput = processUserInput($("#restudiedWord").val());
     }
 
     // console.log(userInput)
@@ -741,8 +746,11 @@ var experiment = {
       secondPredictionReason = $("#secondPredictionReason").val();
     if (!( firstPrediction >= 0 & firstPrediction <= experiment.numTrials/4 &
           secondPrediction >= 0 & secondPrediction <= experiment.numTrials/4)){
-      alert(`Please make a prediction from 0 to ${experiment.numTrials/4}`);
+      alert(`Please make predictions from 0 to ${experiment.numTrials/4}`);
       return false; 
+    } else if (!$.trim($("#firstPredictionReason").val()) |
+        !$.trim($("#secondPredictionReason").val())) {
+      alert(`Please provide reasons for your predictions`)
     } else { 
       experiment.capturePrediction(firstPrediction, firstPredictionReason,
         secondPrediction, secondPredictionReason);
@@ -836,7 +844,7 @@ var experiment = {
   },
 
   captureInterventionTestWord: function(currItem, swahili, english) {
-    var userInput = $("#testedWord").val().toLowerCase(),
+    var userInput = processUserInput($("#testedWord").val()),
       generateItem = ($.inArray(currItem, experiment.interventionGenerateTrialsSave) != -1),
       restudyItem = ($.inArray(currItem, experiment.interventionRestudyTrialsSave) != -1),
       accuracy = english == userInput ? 1 : 0;
@@ -1190,7 +1198,7 @@ var experiment = {
   },
 
   captureAssessmentTestWord: function(currItem, swahili, english){
-    var userInput = $("#testedWord").val().toLowerCase(),
+    var userInput = processUserInput($("#testedWord").val()),
       accuracy = english == userInput ? 1 : 0;
 
     // console.log(userInput)
@@ -1199,6 +1207,62 @@ var experiment = {
     experiment.assessmentTest();
     updateItemTestAccuracyData(experiment.prolificId, currItem, accuracy, userInput, "assessment");
     // experiment.assessmentTestData.push(data);
+  },
+
+  questionnaire: function() {
+    var restudyQuestionText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
+      the <b>review</b> strategy--you reviewed the English translation by copying it 
+      into the textbox.<br><br>In general, how effective is the <b>review</b> strategy?`;
+    
+    var generateQuestionText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
+      the <b>recall</b> strategy--you tried to recall the English translation 
+    from memory.<br><br>In general, how effective is the <b>recall</b> strategy?`;
+
+    if (experiment.predictRestudyFirst){
+      // predict restudy first, then predict generate
+      var firstQuestionText = restudyQuestionText;
+      var secondQuestionText = generateQuestionText;
+    } else {
+      // predict generate first, then predict restudy
+      var firstQuestionText = generateQuestionText;
+      var secondQuestionText = restudyQuestionText;
+    }
+
+    showSlide("questionnaire");
+    $("#firstQuestionText").html(firstQuestionText);
+    $("#secondQuestionText").html(secondQuestionText);
+    $("#questionnaireNextButton").click(function(){$(this).blur(); 
+      $("#questionnaireForm").submit(experiment.validateQuestionnaire());
+    })
+  },
+
+  validateQuestionnaire: function(){
+    var fail = false,
+      errorLog = "",
+      names = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5']
+    for (name of names){
+      if (name == 'Q3'){ 
+        // strategy textarea, trim whitespace
+        if (!$.trim($("#Q3").val())){
+          fail = true;
+          errorLog += "Please respond to " + name + "\n";
+        }
+      } else if (! $("input:radio[name=inputName]".replace("inputName", name)).is(":checked")) {
+        // radio buttons
+        fail = true;
+        errorLog += "Please respond to " + name + "\n";
+      }
+    }
+    if (fail) {
+      alert(errorLog);
+    } else {
+      experiment.captureQuestionnaire();
+    }
+  },
+
+  captureQuestionnaire: function(){
+    //TODO
+    experiment.end()
   },
 
   // The function that gets called when the sequence is finished.
