@@ -145,6 +145,12 @@ function createNewUser(prolificId, startDateTime, condition) {
     interventionTestGenerateScore: "",
     assessmentTestScore: "",
 
+    effectivenessRestudy : "",
+    effectivenessGenerate : "",
+    chosenStrategy : "",
+    effectivenessChosenStrategy : "",
+    effort : "",
+
     comments : ""
   });
 }
@@ -183,6 +189,17 @@ function updateUserInterventionTestScores(prolificId, restudyScore, generateScor
 function updateUserAssessmentTestScore(prolificId, assessmentScore) {
   db.ref('users/' + prolificId).update({
     assessmentTestScore : assessmentScore
+  });
+}
+
+function updateUserQuestionnaire(prolificId, effectivenessRestudy, effectivenessGenerate,
+      chosenStrategy, effectivenessChosenStrategy, effort){
+  db.ref('users/' + prolificId).update({
+    effectivenessRestudy : effectivenessRestudy,
+    effectivenessGenerate : effectivenessGenerate,
+    chosenStrategy : chosenStrategy,
+    effectivenessChosenStrategy : effectivenessChosenStrategy,
+    effort : effort
   });
 }
 
@@ -1261,7 +1278,18 @@ var experiment = {
   },
 
   captureQuestionnaire: function(){
-    //TODO
+    if (experiment.predictRestudyFirst){
+      var effectivenessRestudy = $("#Q1").val(),
+        effectivenessGenerate = $("#Q2").val();
+    } else {
+      var effectivenessRestudy = $("#Q2").val(),
+        effectivenessGenerate = $("#Q1").val();
+    }
+    var chosenStrategy = $("#Q3").val(),
+      effectivenessChosenStrategy = $("#Q4").val(),
+      effort = $("#Q5").val();
+    updateUserQuestionnaire(experiment.prolificId, effectivenessRestudy, effectivenessGenerate,
+      chosenStrategy, effectivenessChosenStrategy, effort);
     experiment.end()
   },
 

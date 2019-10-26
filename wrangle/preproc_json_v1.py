@@ -63,6 +63,11 @@ df_users = df_users[[
   "interventionTestRestudyScore",
   "interventionTestGenerateScore",
   "assessmentTestScore",
+  "effectivenessRestudy",
+  "effectivenessGenerate",
+  "chosenStrategy",
+  "effectivenessChosenStrategy",
+  "effort",
   "comments"
 ]]
 
