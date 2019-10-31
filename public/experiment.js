@@ -1202,7 +1202,7 @@ function runExpt(){
       var trials = experiment.assessmentTestTrials;
       if (trials.length == 0) {
         updateUserAssessmentTestScore(experiment.prolificId, experiment.assessmentTestScore);
-        experiment.end(); 
+        experiment.questionnaire(); 
         return;
       } 
 
