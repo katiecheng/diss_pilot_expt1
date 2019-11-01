@@ -11,11 +11,11 @@ else:
   print("This script takes two arguments, the date prefix and the version/sample suffix for the Firebase json and Prolific csv files.")
 
 ### Read Prolific data (toggle if no corresponding Prolific file)
-# df_prolific = pd.read_csv(
-#   '../data/raw/{datePrefix}_prolific_export_{versionSampleSuffix}.csv'.format(
-#     datePrefix=datePrefix,
-#     versionSampleSuffix=versionSampleSuffix)
-# )
+df_prolific = pd.read_csv(
+  '../data/raw/{datePrefix}_prolific_export_{versionSampleSuffix}.csv'.format(
+    datePrefix=datePrefix,
+    versionSampleSuffix=versionSampleSuffix)
+)
 # print(df_prolific)
 
 ### Read Firebase data
@@ -35,8 +35,8 @@ df_items = pd.DataFrame.from_dict(items_dict, orient='index')
 df_items = df_items.dropna(subset=['itemIndex'])
 
 ### reindex dfs
-# df_prolific = df_prolific.set_index(['participant_id'])
-# df_prolific.index.names = ['prolificId']
+df_prolific = df_prolific.set_index(['participant_id'])
+df_prolific.index.names = ['prolificId']
 df_users = df_users.set_index(['prolificId'])
 df_items = df_items.set_index(['prolificId', 'itemIndex'])
 
@@ -114,7 +114,7 @@ df_users_items = df_users_items.sort_values([
 
 ### Add prolific data! 
 #(removes the rows that don't have corresponding ids in the prolific file)
-# df_users_items = df_prolific.join(df_users_items, how='inner')
+df_users_items = df_prolific.join(df_users_items, how='inner')
 
 
 ### Output to csv for R
