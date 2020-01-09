@@ -230,11 +230,11 @@ df_users['effectivenessChosenStrategy_num'] = [effectivenessRating[rating] for r
 # df_users['effectivenessChosenStrategy_num'] = pd.to_numeric(df_users['effectivenessChosenStrategy_num'], errors='coerce')
 
 
-df_users['diff_assessmentBeliefRG'] = df_users['effectivenessRestudy_num'] - df_users['effectivenessGenerate_num']
+df_users['diff_assessmentBeliefRG_num'] = df_users['effectivenessRestudy_num'] - df_users['effectivenessGenerate_num']
 df_users['assessmentBelief'] = df_users.apply(
-  lambda row: "restudy" if row['diff_assessmentBeliefRG'] >0 else (
-    "generate" if row['diff_assessmentBeliefRG'] <0 else (
-      "equal" if row['diff_assessmentBeliefRG'] ==0 else None)), 
+  lambda row: "restudy" if row['diff_assessmentBeliefRG_num'] >0 else (
+    "generate" if row['diff_assessmentBeliefRG_num'] <0 else (
+      "equal" if row['diff_assessmentBeliefRG_num'] ==0 else None)), 
   axis=1
 )
 
@@ -348,6 +348,7 @@ df_users = df_users[[
   "effectivenessChosenStrategy",
   "effectivenessChosenStrategy_num",
   "assessmentBelief",
+  "diff_assessmentBeliefRG_num",
   "outcomeMatchPrediction",
   "directionOfChange",
   "directionOfChange_num",
