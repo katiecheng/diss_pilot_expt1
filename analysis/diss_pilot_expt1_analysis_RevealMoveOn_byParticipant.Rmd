@@ -1,0 +1,388 @@
+---
+title: "diss_pilot_expt1_analysis"
+author: "Katie"
+date: "10/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lme4)
+library(lmerTest) # p-values on lmer
+source("summarySE.R")
+library(corrplot)
+library(plyr) # for ddply, calculating means for histograms
+
+
+# differences in avgs btw groups
+# hierarchical: differences btw groups, controlling for participant
+```
+
+```{r import data}
+dir_proj <- here::here()
+dir_data <- fs::path(dir_proj, "data")
+
+df_v1n6 = read.csv(
+  fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
+  header=TRUE)
+
+df_v2n48 = read.csv(
+  fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48.csv"),
+  header=TRUE)
+
+df_v2n48_users = read.csv(
+  fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48_users.csv"),
+  header=TRUE)
+
+df_v3n36 = read.csv(
+  fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36.csv"),
+  header=TRUE)
+
+df_v3n36_users = read.csv(
+  fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36_users.csv"),
+  header=TRUE)
+
+```
+
+# Decide criteria upon which to drop participants
+
+```{r wrangle data}
+
+### Create new dfs ##################################################################
+
+#TODO fix so no error 
+#Unequal factor levels: coercing to character
+#binding character and factor vector
+df_v2n48_v3n36_users = bind_rows(df_v2n48_users, df_v3n36_users)
+df_v2n48_v3n36 = bind_rows(df_v2n48, df_v3n36)
+
+#### Incomplete/missing data #######################################################
+# TODO
+
+### Too shitty of scores on restudy copy ###########################################
+# stringent scoring, exact match of correct answer
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreRound1,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# drop rejected
+# df_v1n6 <- df_v1n6[!(df_v1n6$status=="REJECTED"),]
+# df_v2n48 <- df_v2n48[!(df_v2n48$status=="REJECTED"),]
+# df_v3n36 <- df_v3n36[!(df_v3n36$status=="REJECTED"),]
+
+### Update variable types ###########################################################
+
+df_v2n48_v3n36_users$condition <- factor(df_v2n48_v3n36_users$condition,
+                                         levels=c(0,1),
+                                         labels=c("control", "expt"))
+df_v2n48_v3n36$prolificId <- factor(df_v2n48_v3n36$prolificId)
+
+### Create new variables ############################################################
+
+#predicted best strategy
+df_v2n48_v3n36_users$diff_predict <- df_v2n48_v3n36_users$interventionPredictRestudy - df_v2n48_v3n36_users$interventionPredictGenerate
+
+df_v2n48_v3n36_users$interventionPrediction <- ifelse(df_v2n48_v3n36_users$diff_predict >0, 
+       "predictRestudy",
+       ifelse(df_v2n48_v3n36_users$diff_predict <0, 
+               "predictGenerate",
+               "predictEqual"))
+
+#repeat for n36
+df_v3n36_users$diff_predict <- df_v3n36_users$interventionPredictRestudy - df_v3n36_users$interventionPredictGenerate
+df_v3n36_users$interventionPrediction <- ifelse(df_v3n36_users$diff_predict >0, 
+       "predictRestudy",
+       ifelse(df_v3n36_users$diff_predict <0, 
+               "predictGenerate",
+               "predictEqual"))
+
+#best strategy at outcome
+df_v2n48_v3n36_users$diff_score <- df_v2n48_v3n36_users$interventionTestRestudyScore - df_v2n48_v3n36_users$interventionTestGenerateScore
+
+df_v2n48_v3n36_users$interventionOutcome <- ifelse(df_v2n48_v3n36_users$diff_score >0, 
+       "restudy",
+       ifelse(df_v2n48_v3n36_users$diff_score <0, 
+               "generate",
+               "equal"))
+
+#repeat for n=36
+df_v3n36_users$diff_score <- df_v3n36_users$interventionTestRestudyScore - df_v3n36_users$interventionTestGenerateScore
+df_v3n36_users$interventionOutcome <- ifelse(df_v3n36_users$diff_score >0, 
+       "restudy",
+       ifelse(df_v3n36_users$diff_score <0, 
+               "generate",
+               "equal"))
+
+#effectiveness rating
+rating <- c(
+  "extremely" = 1.69,
+  "very" = 1.46,
+  "moderately" = .66,
+  "slightly" = .44,
+  "not" = 0
+)
+
+#best strategy at rating
+df_v3n36_users$diff_beliefs <-rating[as.character(df_v3n36_users$effectivenessRestudy)] - rating[as.character(df_v3n36_users$effectivenessGenerate)]
+
+df_v3n36_users$assessmentBeliefs <- ifelse(df_v3n36_users$diff_beliefs >0, 
+       "believeRestudy",
+       ifelse(df_v3n36_users$diff_beliefs <0, 
+               "believeGenerate",
+               "believeEqual"))
+```
+
+## Research questions
+
+Predictions
+```{r}
+
+# predictions
+# restudy 0-10
+# generate 0-10
+table(df_v2n48_v3n36_users$interventionPrediction)
+table(df_v2n48_v3n36_users$interventionPrediction) / 72
+
+# of 84 people, 72 make predictions for both
+# of those 72...
+# 67% predicted restudy (48/72)
+# 11% predicted generate (8/72)
+# 22% predicted equal (16/72)
+
+mu.interventionPredictRestudy <- ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionPredictRestudy, na.rm = TRUE))
+mu.interventionPredictGenerate <- ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionPredictGenerate, na.rm = TRUE))
+
+
+ggplot(df_v2n48_v3n36_users, aes(x=interventionPredictRestudy, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Predicted score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionPredictRestudy,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+ggplot(df_v2n48_v3n36_users, aes(x=interventionPredictGenerate, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Predicted score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionPredictGenerate,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+```
+Overall, 66% of participants think restudy>generate, revealed by their predicted scores out of 10 for each of the study strategies. The two conditions make similar predictions: m~=4 for restudy, and m~=2.7 for generate. 
+
+
+Intervention learning scores (feedback)
+```{r}
+
+# how did they actually score?
+# restudy 0-10
+# generate 0-10
+
+# of 84 people, 72 have scores
+# of those 72...
+
+addmargins(table(df_v2n48_v3n36_users$interventionPrediction, df_v2n48_v3n36_users$interventionOutcome))
+addmargins(table(df_v2n48_v3n36_users$interventionPrediction, df_v2n48_v3n36_users$interventionOutcome))/72
+
+1/8# chisquared contingency test
+# are prediction and outcome related?
+summary(table(df_v2n48_v3n36_users$interventionPrediction, df_v2n48_v3n36_users$interventionOutcome))
+# trend that outcomes differ by prediction (p=.053)
+# those who predict equal are more likely to get equal outcomes
+# those who predict generate and restudy are most likely to do best with generate.
+
+# mean prediction by prediction
+mu.interventionPredictRestudy <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionPredictRestudy, na.rm = TRUE)); mu.interventionPredictRestudy
+
+mu.interventionPredictGenerate <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionPredictGenerate, na.rm = TRUE)); mu.interventionPredictGenerate
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>%
+  ggplot(aes(x=interventionPredictRestudy, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionPredictRestudy,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ggplot(aes(x=interventionPredictGenerate, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionPredictGenerate,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+# mean score by prediction
+mu.interventionTestRestudyScore <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionTestRestudyScore, na.rm = TRUE)); mu.interventionTestRestudyScore
+
+mu.interventionTestGenerateScore <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionTestGenerateScore, na.rm = TRUE)); mu.interventionTestGenerateScore
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>%
+  ggplot(aes(x=interventionTestRestudyScore, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionTestRestudyScore,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ggplot(aes(x=interventionTestGenerateScore, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionTestGenerateScore,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+
+# mean score by condition
+mu.interventionTestRestudyScore <-  ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionTestRestudyScore, na.rm = TRUE)); mu.interventionTestRestudyScore
+
+mu.interventionTestGenerateScore <- ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionTestGenerateScore, na.rm = TRUE)); mu.interventionTestGenerateScore
+
+  ggplot(df_v2n48_v3n36_users, aes(x=interventionTestRestudyScore, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionTestRestudyScore,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+ggplot(df_v2n48_v3n36_users, aes(x=interventionTestGenerateScore, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionTestGenerateScore,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+
+```
+In fact overall, counter to participants' expectations, 56% of participants did generate>restudy. The two conditions have similar scores: m~=2.8 for restudy, and m~=3.7 for generate.
+
+Though overall, participants made poor predictions and had the relative effectiveness of restudy and generate backwards, they *were* able to predict to some degree: those who predicted generate were correct 88% of the time (above chance, 45.5%), those who predicted restudy were correct 27% of the time (lower than chance, 45.5%), and those who predicted equal performance were correct 44% of the time (above chance, 9%).
+- 11 ways to be equal
+- 55 ways to be generate
+- 55 ways to be restudy
+Those who predicted equal both predicted and achieved lower scores than those who predicted one or the other strategy. Perhaps they knew they had not learned well under either strategy, and the restricted range of low scores raised the chances that they'd score equally under the two strategies.
+
+
+Assessment beliefs
+```{r}
+
+# effectiveness rating
+# restudy 0-5
+# generate 0-5
+# free choice 0-5
+
+# only have for n=35
+# of those 35...
+
+
+table(df_v3n36_users$assessmentBeliefs, df_v3n36_users$condition)
+table(df_v3n36_users$assessmentBeliefs) / 35
+
+# people who have both? only 29?
+addmargins(table(df_v3n36_users$interventionPrediction,
+      df_v3n36_users$assessmentBeliefs)) / 29
+
+```
+
+
+Assessment behaviors (seeTranslation)
+Assessment behaviors (moveOn)
+```{r}
+
+# seeTranslation latency 0-5000
+# moveOn latency 0-5000
+
+
+#plot differences by condition
+
+# mean seeTranslation by condition
+# can't do that; would have to be means of means
+
+```
+
+```{r}
+# figuring out how to summarize latency by individual
+
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyRevealLatency)) %>% ggplot(aes(assessmentStrategyRevealLatency, assessmentStrategyMoveOnLatency)) + geom_point() + facet_wrap(facets = vars(prolificId))
+
+```
+
+
+
+Assessment learning outcomes
+
+
+Everyone will predict that they do better with reread 
+(avg prediction reread, avg prediction generate)
+Split by #/% correct or incorrect on strategy, and/or relative performance on strategies A/B 
+```{r}
+# remove duplicates long data
+# interventionPredictRestudy
+# interventionPredictGenerate
+```
+
+
+In fact, everyone will do better with generate (interventionTest accuracy)
+```{r}
+
+```
+
+
+Expt vs. control
+Intervention folks will have longer reveal latency
+Split by later correct or incorrect
+shorter moveOn latency?
+Split by later correct or incorrect
+Better assessmentTest accuracy
+
+Expt-match-expectations vs. expt-nonmatch vs. control
+Would expect those who predicted the opposite to change the most
+Discrepancy
+Would expect those with bigger discrepancies to move more toward a generate (or restudy) profile
+
+(Expt vs. control, secondary analysis)
+Cluster response types, and compare # of each type in expt vs. control
+Taxonomy 1: short-short, short-long, long-short, long-long
+Taxonomy 2: clustering with k-means
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

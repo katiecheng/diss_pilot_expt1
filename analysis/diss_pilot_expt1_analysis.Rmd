@@ -13,7 +13,9 @@ library(lme4)
 library(lmerTest) # p-values on lmer
 source("summarySE.R")
 library(corrplot)
-
+library(plyr) # for ddply, calculating means for histograms
+library(apaTables) # for apa.cor.table
+#library(ggpubr) # for balloon plot
 
 # differences in avgs btw groups
 # hierarchical: differences btw groups, controlling for participant
@@ -23,17 +25,1016 @@ library(corrplot)
 dir_proj <- here::here()
 dir_data <- fs::path(dir_proj, "data")
 
-df = read.csv(
-  fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
-  header=TRUE)
+df_v1n6 = read.csv(fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"), header=TRUE)
+df_v2n48 = read.csv(fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48.csv"), header=TRUE)
+df_v2n48_users = read.csv(fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48_users.csv"), header=TRUE)
+df_v3n36 = read.csv(fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36.csv"), header=TRUE)
+df_v3n36_users = read.csv(fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36_users.csv"), header=TRUE)
+
+# drop returned
+df_v2n48_users <- filter(df_v2n48_users, status!="RETURNED"); nrow(df_v2n48_users) # 50
+df_v3n36_users <- filter(df_v3n36_users, status!="RETURNED"); nrow(df_v3n36_users) # 37
+df_v2n48 <- filter(df_v2n48, status!="RETURNED")
+df_v3n36 <- filter(df_v3n36, status!="RETURNED")
+
+
+# Create new dfs  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+#TODO fix so no error; upon import, treating all text areas as factors instead of character vectors
+
+v2FactCols <- c("effectivenessRestudy", 
+                "effectivenessGenerate", 
+                "chosenStrategy", 
+                "effectivenessChosenStrategy", 
+                "effort", 
+                "assessmentBelief", 
+                "directionOfChange", 
+                "changeRelativeToOutcome")
+
+v2NumCols <- c("effectivenessRestudy_num", 
+               "effectivenessGenerate_num", 
+               "diff_assessmentBeliefRG_num", 
+               "effectivenessChosenStrategy_num", 
+               "directionOfChange_num", 
+               "changeRelativeToOutcome_num")
+
+df_v2n48_users[,v2FactCols] <- as.factor(NA)
+df_v2n48_users[,v2NumCols] <- as.numeric(NA)
+df_v2n48_v3n36_users = union(df_v2n48_users, df_v3n36_users)
+
+df_v2n48[,v2FactCols] <- as.factor(NA)
+df_v2n48[,v2NumCols] <- as.numeric(NA)
+df_v2n48_v3n36 = union(df_v2n48, df_v3n36)
+
+
+# drop excluded  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# calculate summary stats across group for exclusion
+m_restudyScore <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); m_restudyScore # 8.7
+s_restudyScore <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); s_restudyScore # 2
+
+# drop at user level (restudyScore 3 SD below mean)
+df_v2n48_v3n36_users <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 3*s_restudyScore); nrow(df_v2n48_v3n36_users) # 82
+df_v2n48_users <- filter(df_v2n48_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 3*s_restudyScore); nrow(df_v2n48_users) # 48
+df_v3n36_users <- filter(df_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 3*s_restudyScore); nrow(df_v3n36_users) # 34
+
+# drop at item level
+df_v2n48_v3n36 <- filter(df_v2n48_v3n36, prolificId %in% df_v2n48_v3n36_users$prolificId)
+df_v2n48 <- filter(df_v2n48, prolificId %in% df_v2n48_users$prolificId)
+df_v3n36 <- filter(df_v3n36, prolificId %in% df_v3n36_users$prolificId)
+
 
 ```
+
 
 ```{r wrangle data}
-# TODO drop rejected
+
+# Update variable types # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+df_v2n48_v3n36_users$condition <- factor(df_v2n48_v3n36_users$condition,
+                                         levels=c(0,1),
+                                         labels=c("control", "expt"))
+
+
+# Create new variables # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# feedback type (none, equal, restudy, generate)
+df_v2n48_v3n36_users$feedback <- factor(ifelse(
+  df_v2n48_v3n36_users$condition=="control", "none",
+  ifelse(df_v2n48_v3n36_users$interventionOutcome=="equal", "equal",
+         ifelse(df_v2n48_v3n36_users$interventionOutcome=="restudy", "restudy", "generate"))))
+                                                        
+# check above
+# df_v2n48_v3n36_users[c("condition", "interventionOutcome", "feedback")]
+
+#effort rating; Carey 2010 Verbal label tables
+effortRating <- c(
+  "greatdeal" = 77,
+  "alot" = 55,
+  "moderate" = 43,
+  "alittle" = 12,
+  "not" = 0
+)
+
+df_v3n36_users$effort_num <- effortRating[as.character(df_v3n36_users$effort)]
+
+# which exceeded expectations more?
+df_v2n48_v3n36_users$diff_interventionStrategyScoreExceedPrediction <- df_v2n48_v3n36_users$diff_interventionRestudyScoreToPrediction - 
+  df_v2n48_v3n36_users$diff_interventionGenerateScoreToPrediction
+
 ```
 
+
 ## Research questions
+
+
+### Beliefs across conditions
+Predictions 
+
+```{r Participants predicted theyd score highest with Restudy (tables)}
+
+# predictions
+# restudy 0-10
+# generate 0-10
+
+# n48
+predTbl <- addmargins(table(df_v2n48_users$interventionPrediction)); predTbl
+predTbl / predTbl["Sum"]
+
+
+# n36
+predTbl <- addmargins(table(df_v3n36_users$interventionPrediction)); predTbl
+predTbl / predTbl["Sum"]
+
+# both
+predTbl <- addmargins(table(df_v2n48_v3n36_users$interventionPrediction)); predTbl
+predTbl / predTbl["Sum"]
+
+# of 82 people, 69 make predictions for both
+# of those 69...
+# 68% predicted restudy (47/69)
+# 12% predicted generate (8/69)
+# 20% predicted equal (14/69)
+
+
+```
+Overall, 68% of participants think restudy>generate, revealed by their predicted scores out of 10 for each of the study strategies. 
+
+```{r No pre-intervention differences by condition in score predictions (histograms)}
+
+
+mu.interventionPredictRestudy <- ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionPredictRestudy, na.rm = TRUE)); mu.interventionPredictRestudy
+mu.interventionPredictGenerate <- ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionPredictGenerate, na.rm = TRUE)); mu.interventionPredictGenerate
+
+
+ggplot(df_v2n48_v3n36_users, aes(x=interventionPredictRestudy, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Predicted score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionPredictRestudy,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+ggplot(df_v2n48_v3n36_users, aes(x=interventionPredictGenerate, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Predicted score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionPredictGenerate,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+```
+
+The two conditions make similar predictions: m~=4 for restudy, and m~=2.7 for generate. 
+
+
+Intervention learning scores (feedback)
+
+```{r Participants actually did best on Generate}
+
+# how did they actually score?
+# restudy 0-10
+# generate 0-10
+
+outTbl <- addmargins(table(df_v2n48_v3n36_users$interventionOutcome)); outTbl
+outTbl / outTbl["Sum"]
+
+# of 82 people, all have scores
+# 26% got restudy (21/69)
+# 52% got generate (43/69)
+# 22% got equal (18/69)
+
+
+
+# mean prediction by prediction
+mu.interventionPredictRestudy <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionPredictRestudy, na.rm = TRUE)); mu.interventionPredictRestudy
+
+mu.interventionPredictGenerate <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionPredictGenerate, na.rm = TRUE)); mu.interventionPredictGenerate
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>%
+  ggplot(aes(x=interventionPredictRestudy, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Prediction for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionPredictRestudy,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ggplot(aes(x=interventionPredictGenerate, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Prediction for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionPredictGenerate,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+# mean score by prediction
+mu.interventionTestRestudyScore <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionTestRestudyScore, na.rm = TRUE)); mu.interventionTestRestudyScore
+
+mu.interventionTestGenerateScore <- filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ddply("interventionPrediction", summarise, grp.mean=mean(interventionTestGenerateScore, na.rm = TRUE)); mu.interventionTestGenerateScore
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>%
+  ggplot(aes(x=interventionTestRestudyScore, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionTestRestudyScore,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+filter(df_v2n48_v3n36_users, !is.na(interventionPrediction)) %>% ggplot(aes(x=interventionTestGenerateScore, fill=interventionPrediction, color=interventionPrediction)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionTestGenerateScore,
+             aes(xintercept=grp.mean, color=interventionPrediction),
+             linetype="dashed")
+
+
+# mean score by condition
+mu.interventionTestRestudyScore <-  ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionTestRestudyScore, na.rm = TRUE)); mu.interventionTestRestudyScore
+
+mu.interventionTestGenerateScore <- ddply(df_v2n48_v3n36_users, "condition", summarise, grp.mean=mean(interventionTestGenerateScore, na.rm = TRUE)); mu.interventionTestGenerateScore
+
+  ggplot(df_v2n48_v3n36_users, aes(x=interventionTestRestudyScore, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for restudy strategy", 
+                     breaks=seq(0,10,1), limits=c(0,10)) + 
+  scale_y_continuous(name="Count", limits=c(0,15)) +
+  geom_vline(data=mu.interventionTestRestudyScore,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+ggplot(df_v2n48_v3n36_users, aes(x=interventionTestGenerateScore, fill=condition, color=condition)) +
+  geom_histogram(alpha=0.5, position="dodge", binwidth=.5) + 
+  scale_x_continuous(name="Actual score for generate strategy",
+                     breaks=seq(0,10,1), limits=c(0,10))+ 
+  scale_y_continuous(name="Count", limits=c(0,15))+
+  geom_vline(data=mu.interventionTestGenerateScore,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+
+
+
+```
+
+```{r There is in fact a relationship between participants predictions and their outcomes (table chisq)}
+
+# chisquared contingency test
+# are prediction and outcome related?
+predOutTbl <- table(df_v2n48_v3n36_users$interventionPrediction, df_v2n48_v3n36_users$interventionOutcome)
+predOutTblMarg <- addmargins(predOutTbl); predOutTblMarg / predOutTblMarg["Sum","Sum"]
+summary(predOutTbl)
+
+# SIGNIFICANT that outcomes differ by prediction (p=.02)
+# those who predict equal are 2x more likely to get equal outcomes than get generate or restudy
+# those who predict generate are 10x more likely to get generate than get restudy 
+# those who predict restudy are 2x more likely to get generate than restudy, and 3x more likely to get generate than equal
+
+
+```
+
+In fact overall, counter to participants' expectations, 55% of participants did generate>restudy. The two conditions have similar scores: m~=2.8 for restudy, and m~=3.7 for generate.
+
+Though overall, participants made poor predictions and had the relative effectiveness of restudy and generate backwards, they *were* able to predict to some degree: those who predicted generate were correct 88% of the time (above chance, 45.5%), those who predicted restudy were correct 27% of the time (lower than chance, 45.5%), and those who predicted equal performance were correct 44% of the time (above chance, 9%).
+- 11 ways to be equal
+- 55 ways to be generate
+- 55 ways to be restudy
+Those who predicted equal both predicted and achieved lower scores than those who predicted one or the other strategy. Perhaps they knew they had not learned well under either strategy, and the restricted range of low scores raised the chances that they'd score equally under the two strategies.
+
+
+```{r Plotting the relationship between predictions and outcomes}
+df.PO <- as.data.frame(table("prediction"=df_v2n48_v3n36_users$interventionPrediction,
+      "outcome"=df_v2n48_v3n36_users$interventionOutcome))
+df.PO$prediction <- factor(df.PO$prediction, levels = c("restudy", "equal", "generate"))
+df.PO$outcome <- factor(df.PO$outcome, levels = c("restudy", "equal", "generate"))
+
+df.PO %>% ggplot(aes( x = outcome , y = Freq))  + 
+  geom_bar(stat="identity") + 
+  facet_wrap(vars(prediction)) + theme(axis.text.x = element_text(angle = 90))
+```
+
+
+Assessment beliefs
+```{r Exploring the relationship among predicition * feedback * belief}
+
+# effectiveness rating
+# restudy 0-5
+# generate 0-5
+# free choice 0-5
+
+# only have for n=35
+# of those 35...
+
+### AFTER EXCLUSIONS
+# only have for n=33
+# of those 33...
+
+
+addmargins(table(df_v3n36_users$assessmentBelief, df_v3n36_users$condition))
+table(df_v3n36_users$assessmentBelief) / 33
+
+# people who have both? only 27?
+# prediction by belief
+addmargins(table(df_v3n36_users$interventionPrediction,
+      df_v3n36_users$assessmentBelief)) / 27
+
+# outcome by belief (n=33)
+addmargins(table(df_v3n36_users$interventionOutcome,
+      df_v3n36_users$assessmentBelief)) 
+addmargins(table(df_v3n36_users$interventionOutcome,
+      df_v3n36_users$assessmentBelief)) / 33
+
+# predict * outcome * belief
+addmargins(table(df_v3n36_users$interventionPrediction,
+      df_v3n36_users$interventionOutcome,
+      df_v3n36_users$assessmentBelief))
+addmargins(table(df_v3n36_users$interventionPrediction,
+      df_v3n36_users$interventionOutcome,
+      df_v3n36_users$assessmentBelief))/27
+
+
+df.POB <- as.data.frame(table("prediction"=df_v3n36_users$interventionPrediction,
+      "outcome"=df_v3n36_users$interventionOutcome,
+      "belief"=df_v3n36_users$assessmentBelief))
+df.POB$prediction <- factor(df.POB$prediction, levels = c("restudy", "equal", "generate"))
+df.POB$outcome <- factor(df.POB$outcome, levels = c("restudy", "equal", "generate"))
+df.POB$belief <- factor(df.POB$belief, levels = c("restudy", "equal", "generate"))
+
+
+#ggballoonplot(df.POB, x = "outcome", y = "belief", size = "Freq",
+#              fill = "Freq", facet.by = "prediction",
+#              ggtheme = theme_bw()) +
+#  scale_fill_viridis_c(option = "C")
+
+#df.POB %>% ggplot(aes( x = outcome, y = Freq))  + 
+#  geom_bar(stat="identity", position=position_dodge(.9), aes(fill = belief)) + 
+#  facet_wrap(vars(prediction))
+
+df.POB %>% ggplot(aes( x = outcome , y = Freq))  + 
+  geom_bar(stat="identity", aes(fill = belief)) + 
+  facet_wrap(vars(prediction)) + theme(axis.text.x = element_text(angle = 90))
+
+```
+
+### Correlations among measures
+```{r Exploring correlations among measures}
+
+apa.cor.table(df_v2n48_v3n36_users[c(
+  "interventionStrategyRestudyScoreRound1",
+  "interventionStrategyGenerateScoreRound1",
+  "interventionPredictRestudy",
+  "interventionPredictGenerate",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "avgAssessmentStrategyRevealLatency",
+  "avgAssessmentStrategyMoveOnLatency",
+  "assessmentTestScore")])
+
+```
+
+
+
+### Exploring Latency as a metric
+Assessment behaviors (seeTranslation)
+Assessment behaviors (moveOn)
+
+```{r visualizing latencies by individual}
+# figuring out how to summarize latency by individual
+
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyRevealLatency)) %>% ggplot(aes(assessmentStrategyRevealLatency, assessmentStrategyMoveOnLatency)) + geom_point() + facet_wrap(facets = vars(prolificId), ncol=13) + scale_x_continuous(limits=c(0,5050)) + scale_y_continuous(limits=c(0,5050))
+
+# with trendline
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyRevealLatency)) %>% ggplot(aes(assessmentStrategyRevealLatency, assessmentStrategyMoveOnLatency)) + geom_point() + facet_wrap(facets = vars(prolificId), ncol=13) + geom_smooth(method=lm) + scale_x_continuous(limits=c(0,5050)) + scale_y_continuous(limits=c(0,5050))
+
+```
+
+```{r is avgLatency good? plotting avg and sd latency per individual by condition}
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, color=condition)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin=avgAssessmentStrategyMoveOnLatency-sdAssessmentStrategyMoveOnLatency, ymax=avgAssessmentStrategyMoveOnLatency+sdAssessmentStrategyMoveOnLatency), width=.2, position=position_dodge(.9)) + 
+  geom_errorbarh(aes(xmin=avgAssessmentStrategyRevealLatency-sdAssessmentStrategyRevealLatency, xmax=avgAssessmentStrategyRevealLatency+sdAssessmentStrategyRevealLatency), width=.2, position=position_dodge(.9))
+
+```
+
+### Intervention results
+
+```{r intervention results by condition (effect of feedback)}
+
+# scatter
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, color=condition)) + 
+  geom_point()
+
+# histograms
+
+mu.avgAssessmentStrategyRevealLatency <- filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ddply("condition", summarise, grp.mean=mean(avgAssessmentStrategyRevealLatency, na.rm = TRUE)); mu.avgAssessmentStrategyRevealLatency
+
+mu.avgAssessmentStrategyMoveOnLatency <- filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ddply("condition", summarise, grp.mean=mean(avgAssessmentStrategyMoveOnLatency, na.rm = TRUE)); mu.avgAssessmentStrategyMoveOnLatency
+
+mu.interventionTestScore <- filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ddply("condition", summarise, grp.mean=mean(interventionTestScore, na.rm = TRUE)); mu.interventionTestScore
+
+mu.assessmentTestScore <- filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ddply("condition", summarise, grp.mean=mean(assessmentTestScore, na.rm = TRUE)); mu.assessmentTestScore
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, fill=condition, color=condition)) + 
+  geom_histogram(alpha=0.5, position="dodge") +
+  geom_vline(data=mu.avgAssessmentStrategyRevealLatency,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(avgAssessmentStrategyMoveOnLatency, fill=condition, color=condition)) + 
+  geom_histogram(alpha=0.5, position="dodge") +
+  geom_vline(data=mu.avgAssessmentStrategyMoveOnLatency,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(assessmentTestScore, fill=condition, color=condition)) + 
+  geom_histogram(alpha=0.5, position="dodge") +
+  geom_vline(data=mu.assessmentTestScore,
+             aes(xintercept=grp.mean, color=condition),
+             linetype="dashed")
+
+table(filter(df_v2n48_v3n36_users, !is.na(condition))$condition) # n=60 expt, n=19 control
+
+# means and errorbars, Latency means
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(condition, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "condition", y = "mean latencies")
+
+
+# means and errorbars, Intervention test score
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", interventionTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+means %>% ggplot(aes(condition, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "condition", y="interventionTestScore")
+
+# means and errorbars, Assessment test score
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="assessmentTestScore") %>% ggplot(aes(condition, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "condition", y="assessmentTestScore")
+
+
+
+# simple lm, diff in mean latencies? no.
+summary(lm(avgAssessmentStrategyRevealLatency ~ condition, df_v2n48_v3n36_users)) # ns
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ condition, df_v2n48_v3n36_users)) # ns
+#summary(lm(totalL ~ condition, df_v2n48_v3n36_users)) # ns
+
+# simple lm, diff in conjunction of latencies? 
+# short*long, median split
+
+# diff in sd latencies? ...yes?
+summary(lm(sdAssessmentStrategyRevealLatency ~ condition, df_v2n48_v3n36_users))
+summary(lm(sdAssessmentStrategyMoveOnLatency ~ condition, df_v2n48_v3n36_users)) # yes...? expt group greater variance in moveOn
+
+# diff in learning outcomes? no.
+summary(lm(assessmentTestScore ~ condition, df_v2n48_v3n36_users))
+
+#summary(lm(avgAssessmentStrategyRevealLatency ~ condition * , df_v2n48_v3n36_users))
+
+
+# lmer?
+#summary(lmer(assessmentStrategyRevealLatency ~ condition + assessmentTestAccuracy + (1 | prolificId), df_v2n48_v3n36))
+#summary(lmer(assessmentStrategyMoveOnLatency ~ condition + assessmentTestAccuracy + (1 | prolificId), df_v2n48_v3n36))
+
+
+```
+
+```{r effect of feedback (4 categorical)}
+
+
+
+# scatter
+filter(df_v2n48_v3n36_users, !is.na(interventionOutcome)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, color=feedback)) + 
+  geom_point() 
+
+# histograms
+
+filter(df_v2n48_v3n36_users, !is.na(feedback)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, fill=feedback, color=feedback)) + 
+  geom_histogram(alpha=0.5, position="dodge") 
+
+filter(df_v2n48_v3n36_users, !is.na(feedback)) %>% ggplot(aes(avgAssessmentStrategyMoveOnLatency, fill=feedback, color=feedback)) + 
+  geom_histogram(alpha=0.5, position="dodge")
+
+filter(df_v2n48_v3n36_users, !is.na(feedback)) %>% ggplot(aes(assessmentTestScore, fill=feedback, color=feedback)) + 
+  geom_histogram(alpha=0.5, position="dodge")
+  
+
+# means and errorbars, Latency means
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("feedback", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(feedback)) %>% ggplot(aes(feedback, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "intervention outcome", y = "mean latencies")
+
+# means and errorbars, Assessment test score
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("feedback", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="assessmentTestScore" & !is.na(feedback)) %>% ggplot(aes(feedback, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore") 
+
+
+# simple lm, diff in mean latencies? no.
+summary(lm(avgAssessmentStrategyRevealLatency ~ feedback, df_v2n48_v3n36_users)) # ?
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ feedback, df_v2n48_v3n36_users)) # p<.02, equal>none
+
+# diff in learning outcomes? no.
+summary(lm(assessmentTestScore ~ feedback, df_v2n48_v3n36_users)) # ns
+
+```
+
+
+```{r effect of feedback moderated by outcome (3 categorical)}
+
+# scatter
+filter(df_v2n48_v3n36_users, !is.na(interventionOutcome)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, color=condition)) + 
+  geom_point() + facet_wrap(facets = vars(interventionOutcome), ncol=2)
+
+# histograms
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(avgAssessmentStrategyRevealLatency, fill=condition, color=condition)) + 
+  geom_histogram(alpha=0.5, position="dodge") + facet_wrap(facets = vars(interventionOutcome))
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(avgAssessmentStrategyMoveOnLatency, fill=condition, color=condition)) + 
+  geom_histogram(alpha=0.5, position="dodge") + facet_wrap(facets = vars(interventionOutcome))
+
+filter(df_v2n48_v3n36_users, !is.na(condition)) %>% ggplot(aes(assessmentTestScore, fill=condition, color=condition)) + 
+  geom_histogram(alpha=0.5, position="dodge") + facet_wrap(facets = vars(interventionOutcome))
+
+table(df_v2n48_v3n36_users$condition, df_v2n48_v3n36_users$interventionOutcome) # n=60 expt, n=19 control
+
+# means and errorbars, Latency means
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "intervention outcome", y = "mean latencies") + facet_wrap(facet=vars(condition))
+
+# means and errorbars, Assessment test score
+# melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentStrategyTotalLatency, factor_key = TRUE) # factor_key preserves order
+# means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+# 
+# filter(means, !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean)) + 
+#     geom_point(position=position_dodge(.9), stat="identity") + 
+#     geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+#     theme(axis.text.x = element_text(angle = 90)) +
+#     labs(x = "assessmentStrategyTotalLatency") + facet_wrap(facet=vars(condition))
+
+# means and errorbars, Assessment test score
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore") + facet_wrap(facet=vars(condition))
+
+
+# simple lm, diff in mean latencies, moderated by interventionOutcome? 
+summary(lm(avgAssessmentStrategyRevealLatency ~ condition * interventionOutcome, df_v2n48_v3n36_users)) #?, the experimental group spent longer on seeTranslation than control. Those in the experimental group who got generate feedback spent shorter in seeTranslation than those in the control group who got no generate feedback.
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ condition * interventionOutcome, df_v2n48_v3n36_users)) # p<.05, the experimental group spent longer on moveOn than control. Those in the experimental group who got generate feedback spent shorter in moveOn than those in the control group who got no generate feedback.
+
+# simple lm, diff in conjunction of latencies? 
+# short*long, median split
+
+
+# diff in learning outcomes? no.
+summary(lm(assessmentTestScore ~ condition * interventionOutcome, df_v2n48_v3n36_users)) # no
+
+# diff in learning outcomes, controlling for intervention score? no.
+summary(lm(assessmentTestScore ~ condition * interventionOutcome + interventionTestScore, df_v2n48_v3n36_users)) # no
+
+# lmer?
+#summary(lmer(assessmentStrategyRevealLatency ~ condition + assessmentTestAccuracy + (1 | prolificId), df_v2n48_v3n36))
+#summary(lmer(assessmentStrategyMoveOnLatency ~ condition + assessmentTestAccuracy + (1 | prolificId), df_v2n48_v3n36))
+
+
+```
+
+
+```{r effect of feedback moderated by outcome (3 categorical) contd}
+#df_gotFeedback$interventionTestScore <- df_gotFeedback$interventionTestGenerateScore + df_gotFeedback$interventionTestRestudyScore
+
+summary(lm(avgAssessmentStrategyRevealLatency ~ interventionOutcome, df_gotFeedback)) # ?, generate spends least time before seeTranslation?
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ interventionOutcome, df_gotFeedback)) # p<.01, generate spends least time before moveOn
+summary(lm(sdAssessmentStrategyRevealLatency ~ interventionOutcome, df_gotFeedback)) # no
+summary(lm(sdAssessmentStrategyMoveOnLatency ~ interventionOutcome, df_gotFeedback)) # no
+summary(lm(assessmentTestScore ~ interventionOutcome, df_gotFeedback)) # ? TREND, generate does better on test
+summary(lm(assessmentTestScore ~ interventionOutcome + interventionTestScore, df_gotFeedback)) # n.s.
+# Conclusion: feedback changes behaviors, and maybe outcomes
+
+# plotting interaction?
+#df_gotFeedback %>% ggplot(aes(interventionTestScore, assessmentTestScore, color=interventionOutcome)) + geom_point() + geom_smooth(method=loess)
+
+summary(lm(effectivenessRestudy_num ~ interventionOutcome, df_v3n36_users)) # ? TREND, restudy rate restudy higher
+summary(lm(effectivenessGenerate_num ~ interventionOutcome, df_v3n36_users)) # p<.03, generate rate generate higher
+summary(lm(effectivenessChosenStrategy_num ~ interventionOutcome, df_v3n36_users)) # ?
+summary(lm(diff_beliefs ~ interventionOutcome, df_v3n36_users)) # p<.05 generate rate generate higher than restudy
+# Conclusion: feedback does change beliefs...
+
+# Latency means
+melt <- tidyr::gather(df_gotFeedback, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "intervention outcome", y = "mean latencies")
+
+
+melt <- tidyr::gather(df_gotFeedback, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, sdAssessmentStrategyRevealLatency, sdAssessmentStrategyMoveOnLatency, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, measures=="avgAssessmentStrategyRevealLatency") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "avgAssessmentStrategyRevealLatency")
+
+filter(means, measures=="avgAssessmentStrategyMoveOnLatency") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "avgAssessmentStrategyMoveOnLatency")
+
+filter(means, measures=="sdAssessmentStrategyRevealLatency") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "sdAssessmentStrategyRevealLatency")
+
+filter(means, measures=="sdAssessmentStrategyMoveOnLatency") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "sdAssessmentStrategyMoveOnLatency")
+
+filter(means, measures=="assessmentTestScore" & !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore")
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "effectivenessRestudy_num")
+
+filter(means, measures=="effectivenessRestudy_num") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "effectivenessRestudy_num")
+
+filter(means, measures=="effectivenessGenerate_num") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "effectivenessGenerate_num")
+
+filter(means, measures=="effectivenessChosenStrategy_num") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "effectivenessChosenStrategy_num")
+
+filter(means, measures=="diff_beliefs") %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "diff_beliefs")
+
+```
+
+```{r effect of feedback continuous}
+
+df_gotFeedback <- filter(df_v2n48_v3n36_users, condition=="expt")
+df_gotFeedback$diff_predict_vs_score <- df_gotFeedback$diff_predict - df_gotFeedback$diff_score
+
+summary(lm(avgAssessmentStrategyRevealLatency ~ diff_predict_vs_score, df_gotFeedback)) # no
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ diff_predict_vs_score, df_gotFeedback)) # no
+summary(lm(sdAssessmentStrategyRevealLatency ~ diff_predict_vs_score, df_gotFeedback)) # yes...? more generate, less variance
+summary(lm(sdAssessmentStrategyMoveOnLatency ~ diff_predict_vs_score, df_gotFeedback)) # yes...? more generate, less variance
+summary(lm(assessmentTestScore ~ diff_predict_vs_score, df_gotFeedback)) # no
+
+
+df_gotFeedback %>% ggplot(aes(diff_predict_vs_score, avgAssessmentStrategyRevealLatency, color=diff_predict_vs_score)) + geom_point()
+df_gotFeedback %>% ggplot(aes(diff_predict_vs_score, avgAssessmentStrategyMoveOnLatency, color=diff_predict_vs_score)) + geom_point()
+df_gotFeedback %>% ggplot(aes(diff_predict_vs_score, sdAssessmentStrategyRevealLatency, color=diff_predict_vs_score)) + geom_point()
+df_gotFeedback %>% ggplot(aes(diff_predict_vs_score, sdAssessmentStrategyMoveOnLatency, color=diff_predict_vs_score)) + geom_point()
+df_gotFeedback %>% ggplot(aes(diff_predict_vs_score, assessmentTestScore, color=diff_predict_vs_score)) + geom_point()
+
+df_v3n36_users$diff_predict_vs_score <- df_v3n36_users$diff_predict - df_v3n36_users$diff_score
+summary(lm(diff_beliefs ~ diff_predict_vs_score, df_v3n36_users)) # no
+
+```
+
+
+```{r effect of feedback moderated by prediction*outcome (3x3 categorical) expt only}
+
+df_gotFeedback$predictionbyoutcome <- factor(with(df_gotFeedback, interaction(interventionPrediction, interventionOutcome)))
+
+summary(lm(avgAssessmentStrategyRevealLatency ~ predictionbyoutcome, df_gotFeedback)) # no
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ predictionbyoutcome, df_gotFeedback)) # TREND, generate feedback had shorter moveOn latency (but restudy feedback too)
+summary(lm(sdAssessmentStrategyRevealLatency ~ predictionbyoutcome, df_gotFeedback)) # ?
+summary(lm(sdAssessmentStrategyMoveOnLatency ~ predictionbyoutcome, df_gotFeedback)) # no
+summary(lm(assessmentTestScore ~ predictionbyoutcome, df_gotFeedback)) # ?, generate feedback had higher assessmentTest scores??
+
+
+df_v2n48_v3n36_users$predictionbyoutcome <- factor(with(df_v2n48_v3n36_users, interaction(interventionPrediction, interventionOutcome)))
+
+summary(lm(avgAssessmentStrategyRevealLatency ~ predictionbyoutcome * condition, df_v2n48_v3n36_users)) # no
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ predictionbyoutcome * condition, df_v2n48_v3n36_users)) # TREND
+summary(lm(assessmentTestScore ~ predictionbyoutcome * condition, df_v2n48_v3n36_users)) # no
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(predictionbyoutcome)) %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies") + facet_wrap(facet=vars(condition))
+
+
+### Beliefs
+
+df_v3n36_users$predictionbyoutcome <- factor(with(df_v3n36_users, interaction(interventionPrediction, interventionOutcome)))
+
+summary(lm(effectivenessRestudy_num ~ predictionbyoutcome, df_v3n36_users)) # no
+summary(lm(effectivenessGenerate_num ~ predictionbyoutcome, df_v3n36_users)) # no
+summary(lm(effectivenessChosenStrategy_num ~ predictionbyoutcome, df_v3n36_users)) # ? those who predicted Restudy initially rate their chosen strategy as more effective. Why? What strategies are they using? Can we see a difference in their descriptions?
+summary(lm(diff_beliefs ~ predictionbyoutcome, df_v3n36_users)) # no
+
+
+melt <- tidyr::gather(df_gotFeedback, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies")
+
+melt <- tidyr::gather(df_gotFeedback, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, sdAssessmentStrategyRevealLatency, sdAssessmentStrategyMoveOnLatency, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, measures=="avgAssessmentStrategyRevealLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "avgAssessmentStrategyRevealLatency")
+
+filter(means, measures=="avgAssessmentStrategyMoveOnLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "avgAssessmentStrategyMoveOnLatency")
+
+filter(means, measures=="sdAssessmentStrategyRevealLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "sdAssessmentStrategyRevealLatency")
+
+filter(means, measures=="sdAssessmentStrategyMoveOnLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "sdAssessmentStrategyMoveOnLatency")
+
+filter(means, measures=="assessmentTestScore") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore")
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+means %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "beliefs")
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean",  diff_beliefs, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="diff_beliefs") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "diff_beliefs")
+```
+
+
+```{r effect of feedback moderated by prediction*outcome (3x3 categorical)}
+
+df_v2n48_v3n36_users$predictionbyoutcome <- factor(with(df_v2n48_v3n36_users, interaction(interventionPrediction, interventionOutcome)))
+df_v2n48_v3n36_users$predictionbyoutcome <- factor(df_v2n48_v3n36_users$predictionbyoutcome, 
+                                                   levels = c("predictEqual.equal", 
+                                                              "predictRestudy.restudy",
+                                                              "predictGenerate.generate",
+                                                              "predictEqual.restudy", 
+                                                              "predictEqual.generate",
+                                                              "predictRestudy.equal",
+                                                              "predictRestudy.generate", 
+                                                              "predictGenerate.equal",
+                                                              "predictGenerate.restudy"
+                                                              ))
+
+summary(lm(avgAssessmentStrategyRevealLatency ~ condition* predictionbyoutcome, df_v2n48_v3n36_users)) # no
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ condition* predictionbyoutcome, df_v2n48_v3n36_users)) # TREND
+summary(lm(sdAssessmentStrategyRevealLatency ~ condition* predictionbyoutcome, df_v2n48_v3n36_users)) # ?
+summary(lm(sdAssessmentStrategyMoveOnLatency ~ condition* predictionbyoutcome, df_v2n48_v3n36_users)) # ?
+summary(lm(assessmentTestScore ~ condition* predictionbyoutcome, df_v2n48_v3n36_users)) # ?
+
+## Latencies
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(predictionbyoutcome)) %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies") + facet_wrap(facet=vars(condition)) 
+
+
+filter(means, !is.na(predictionbyoutcome) & measures=="avgAssessmentStrategyRevealLatency") %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies") + facet_wrap(facet=vars(condition)) +
+    scale_y_continuous(limits=c(-10000,10000))
+
+
+filter(means, !is.na(predictionbyoutcome) & measures=="avgAssessmentStrategyMoveOnLatency") %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies") + facet_wrap(facet=vars(condition)) +
+    scale_y_continuous(limits=c(-10000,10000))
+
+
+## Test
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(predictionbyoutcome)) %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore") + facet_wrap(facet=vars(condition)) 
+
+### Beliefs
+
+df_v3n36_users$predictionbyoutcome <- factor(with(df_v3n36_users, interaction(interventionPrediction, interventionOutcome)))
+
+summary(lm(effectivenessRestudy_num ~ predictionbyoutcome, df_v3n36_users)) # no
+summary(lm(effectivenessGenerate_num ~ predictionbyoutcome, df_v3n36_users)) # no
+summary(lm(effectivenessChosenStrategy_num ~ predictionbyoutcome, df_v3n36_users)) # ? those who predicted Restudy initially rate their chosen strategy as more effective. Why? What strategies are they using? Can we see a difference in their descriptions?
+summary(lm(diff_beliefs ~ predictionbyoutcome, df_v3n36_users)) # no
+
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies")
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, sdAssessmentStrategyRevealLatency, sdAssessmentStrategyMoveOnLatency, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, measures=="avgAssessmentStrategyRevealLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "avgAssessmentStrategyRevealLatency")
+
+filter(means, measures=="avgAssessmentStrategyMoveOnLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "avgAssessmentStrategyMoveOnLatency")
+
+filter(means, measures=="sdAssessmentStrategyRevealLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "sdAssessmentStrategyRevealLatency")
+
+filter(means, measures=="sdAssessmentStrategyMoveOnLatency") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "sdAssessmentStrategyMoveOnLatency")
+
+filter(means, measures=="assessmentTestScore") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore")
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+means %>% ggplot(aes(predictionbyoutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "beliefs")
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean",  diff_beliefs, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("predictionbyoutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="diff_beliefs") %>% ggplot(aes(predictionbyoutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "diff_beliefs")
+```
+
+```{r making sense of predictors}
+
+# prediction 
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionPrediction", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(interventionPrediction)) %>% ggplot(aes(interventionPrediction, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies") + facet_wrap(facet=vars(condition)) 
+
+# outcome
+
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+filter(means, !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean, color=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "latencies") + facet_wrap(facet=vars(condition)) 
+
+
+```
+
+
+
+
+Assessment learning outcomes
+
+
 Everyone will predict that they do better with reread 
 (avg prediction reread, avg prediction generate)
 Split by #/% correct or incorrect on strategy, and/or relative performance on strategies A/B 
@@ -46,7 +1047,7 @@ Split by #/% correct or incorrect on strategy, and/or relative performance on st
 
 In fact, everyone will do better with generate (interventionTest accuracy)
 ```{r}
-
+#df_v2n48_v3n36_users$
 ```
 
 
@@ -67,24 +1068,249 @@ Cluster response types, and compare # of each type in expt vs. control
 Taxonomy 1: short-short, short-long, long-short, long-long
 Taxonomy 2: clustering with k-means
 
+## Explore latency further, to try to explain results
+
+```{r Explore latency over 20 items}
 
 
-## R Markdown
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyOrder)) %>% ggplot(aes(assessmentStrategyOrder, assessmentStrategyRevealLatency, color=prolificId)) +
+  geom_point() + geom_smooth(se = FALSE) + 
+  theme(legend.position = "none")
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyOrder)) %>% ggplot(aes(assessmentStrategyOrder, assessmentStrategyMoveOnLatency, color=prolificId)) +
+  geom_point() + geom_smooth(se = FALSE) + 
+  theme(legend.position = "none")
 
-```{r cars}
-summary(cars)
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyOrder)) %>% ggplot(aes(assessmentStrategyOrder, assessmentStrategyRevealLatency)) +
+  geom_point() + geom_smooth(se = FALSE) + 
+  theme(legend.position = "none")
+
+
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyOrder)) %>% ggplot(aes(assessmentStrategyOrder, assessmentStrategyMoveOnLatency)) +
+  geom_point() + geom_smooth(se = FALSE) + 
+  theme(legend.position = "none")
+
+```
+Latency decreases over the first 6 itmes or so, then plateaus around 2 sec, for both reveal and moveOn.
+
+What if we take out the 0's and 5's?
+```{r Explore latency over 20 items removing extremes}
+
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyOrder) & 
+         !(assessmentStrategyRevealLatency == 0) & 
+         !(assessmentStrategyRevealLatency >= 5000)) %>% ggplot(aes(assessmentStrategyOrder, assessmentStrategyRevealLatency)) +
+  geom_point() + geom_smooth(se = FALSE) + 
+  theme(legend.position = "none")
+
+
+filter(df_v2n48_v3n36, !is.na(assessmentStrategyOrder)& 
+         !(assessmentStrategyMoveOnLatency == 0) & 
+         !(assessmentStrategyMoveOnLatency >= 5000)) %>% ggplot(aes(assessmentStrategyOrder, assessmentStrategyMoveOnLatency)) +
+  geom_point() + geom_smooth(se = FALSE) + 
+  theme(legend.position = "none")
+
+```
+When we take out the people who are arguably "passive", either skipping quickly (0 sec), or letting the time run (5 sec)...
+For reveal, latency decreases steadily, from 2.4 sec to 1.5 sec. 
+For moveOn, latency decreases over the first 7 items or so, then plateaus around 1.4 sec.
+
+Hypotheses:
+- retreival takes cognitive effort and people exert less and less of that over time
+- review is passive, and people can consistely exert a steady amount of effort
+
+? How long does the actual cognitive process take?
+From pilot:
+- retrieval: 2.5 secs to reveal, 2 secs to moveOn
+- re-read: 1.4 secs to reveal, 2.4 secs to moveOn
+- choice: 3 secs to reveal, 2.5 secs to moveOn
+
+Hypotheses:
+- when free choice, people use a unforcused, haphazard mix of strategies -> longer time
+- when intentionally using a strategy -> shorter time
+
+? What does latency mean?
+- how to beliefs relate to latency? (effect of feedback)
+- how does latency relate to performance? (assessment perf, controlling for intervention perf)
+
+```{r what does latency correlate with?}
+
+df_expt <- filter(df_v2n48_v3n36_users, condition=="expt")
+df_control <- filter(df_v2n48_v3n36_users, condition=="control")
+
+apa.cor.table(df_v2n48_v3n36_users[c(
+  "avgAssessmentStrategyRevealLatency",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "diff_score",
+  "assessmentTestScore")])
+
+apa.cor.table(df_v2n48_v3n36_users[c(
+  "avgAssessmentStrategyMoveOnLatency",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "diff_score",
+  "assessmentTestScore")])
+
+
+# expt only 
+apa.cor.table(df_expt[c(
+  "avgAssessmentStrategyRevealLatency",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "diff_score",
+  "assessmentTestScore")])
+
+apa.cor.table(df_expt[c(
+  "avgAssessmentStrategyMoveOnLatency",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "diff_score",
+  "assessmentTestScore")])
+
+# control only 
+apa.cor.table(df_control[c(
+  "avgAssessmentStrategyRevealLatency",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "diff_score",
+  "assessmentTestScore")])
+
+apa.cor.table(df_control[c(
+  "avgAssessmentStrategyMoveOnLatency",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "diff_score",
+  "assessmentTestScore")])
+
+```
+Not a lot of revealing correlations...Could be that in the experimental group, the longer to reveal, the higher the assessmentTest score.
+
+
+
+compare scores interv and assess
+change assess to force 10 sec? (+distractor?)
+or, reward learning?
+```{r mean test scores}
+mean(df_v2n48_v3n36_users$interventionTestScore, na.rm=T) # 6.8
+mean(df_v2n48_v3n36_users$assessmentTestScore, na.rm=T) # 8.7
+```
+Assessment score is higher, so giving them ability to skip strategy doesn't seem to affect too many. Unless they're getting better at studying during the study phase?
+
+Calculating actual scores
+```{r Calculating actual feedback scores by group}
+
+#3
+
+# feedback
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean",  interventionTestRestudyScore, interventionTestGenerateScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition","interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+# outcomes
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean",  assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition","interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+# do for n36
+#, effectivenessChosenStrategy_num, effectivenessRestudy_num, effectivenessGenerate_num
+
+#3x3?
+
+
+```
+## Investigating change in beliefs relative to predictions and outcomes
+
+```{r abstract outcomes toward/away}
+
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionTestOutcomeRG, df_v2n48_v3n36_users)) # 0.0007441
+summary(lm(changeRelativeToOutcome_num ~ abs(diff_interventionTestOutcomeRG), df_v2n48_v3n36_users)) # 0.1011
+
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction, df_v2n48_v3n36_users)) # 0.4
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # 0.6262
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # 0.625
+
+filter(df_v2n48_v3n36_users, !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num)) + geom_point() + geom_smooth(method=loess)
+
+#which exceeded expectations more?
+
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.3352
 ```
 
-## Including Plots
+There's nearly a trend. The greater the discrepancy between reread and generate, the more likely they are to make a change that is consistent with the direction of the feedback. 
 
-You can also embed plots, for example:
+```{r abstract outcomes -2, -1, 0, 1, 2}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+summary(lm(directionOfChange_num ~ abs(diff_interventionTestOutcomeRG), df_v2n48_v3n36_users)) # 0.1315
+summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG, df_v2n48_v3n36_users)) # 0.0003017
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+
+summary(lm(directionOfChange_num ~ diff_interventionRestudyScoreToPrediction, df_v2n48_v3n36_users)) # 0.09246 TREND
+summary(lm(directionOfChange_num ~ diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # n.s.
+summary(lm(directionOfChange_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # 0.02332 SIG
+
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+#which exceeded expectations more?
+
+summary(lm(directionOfChange_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.00615
+
+summary(lm(directionOfChange_num ~ abs(diff_interventionStrategyScoreExceedPrediction), df_v2n48_v3n36_users)) # 0.005985
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+
+# when both are in the model...but this prob doesn't make sense since correlated
+summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG + diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.0008947
+
+```
+Those who get generate are moving toward generate. Those who get restudy are moving toward equal/generate. 
+The more the Restudy outcome exceeds the prediction, the less change toward feedback (more change away). If you do better than expected on Restudy, you move away from feedback, else you move toward feedback. 
+The more the Generate outcome exceeds the prediction, the more change toward feedback. If you did better than expected on generate, you move toward feedback. Else if you did worse than expected on generate, you move toward or don't change in responses to feedback. 
+
+
+
+```{r going back to simpler outcomes}
+
+summary(lm(diff_assessmentBeliefRG_num ~ abs(diff_interventionTestOutcomeRG), df_v2n48_v3n36_users)) # 0.1194
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionTestOutcomeRG, df_v2n48_v3n36_users)) # 0.008415
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionRestudyScoreToPrediction, df_v2n48_v3n36_users)) # ns
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # ns
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # ns
+
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+#which exceeded expectations more?
+
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.4244
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+
+filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -39,11 +39,19 @@ rsconnect/
 # large report files
 *analysis.html
 
-########## OUTPUT ##########
+# documents and documentation
+*.docx
 
-# Data
+########## DATA ##########
+
+# Manual
+*.xlsx
+
+# Output
 *.json
 *.csv
+*.png
+
 
 ########## FIREBASE ##########
 

@@ -456,7 +456,9 @@ function runExpt(){
     /* Properties */
     numTrials: numTrials,
     numStrategyRounds: numStrategyRounds,
-    condition: condition,
+    /* Toggle for random or manual condition */
+    // condition: condition,
+    condition: 1,
     myTrialOrder: myTrialOrder, // already shuffled
     trialDuration: trialDuration,
     feedbackDuration: feedbackDuration,
@@ -841,11 +843,9 @@ function runExpt(){
           experiment.interventionTestRestudyScore, 
           experiment.interventionTestGenerateScore);
         if (experiment.condition){
-          // experiment.controlFeedback();
           experiment.interventionFeedback(); 
         } else {
           experiment.controlFeedback();
-          // experiment.interventionFeedback(); 
         }
         return;
       } 

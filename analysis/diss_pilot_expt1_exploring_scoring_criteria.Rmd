@@ -1,0 +1,207 @@
+---
+title: "diss_pilot_expt1_analysis"
+author: "Katie"
+date: "10/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lme4)
+library(lmerTest) # p-values on lmer
+source("summarySE.R")
+library(corrplot)
+library(plyr) # for ddply, calculating means for histograms
+#library(ggpubr) # for balloon plot
+library(apaTables) # for apa.cor.table
+
+
+# differences in avgs btw groups
+# hierarchical: differences btw groups, controlling for participant
+```
+
+```{r import data}
+dir_proj <- here::here()
+dir_data <- fs::path(dir_proj, "data")
+
+df_v1n6 = read.csv(
+  fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
+  header=TRUE)
+
+df_v2n48 = read.csv(
+  fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48.csv"),
+  header=TRUE)
+
+df_v2n48_users = read.csv(
+  fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48_users.csv"),
+  header=TRUE)
+
+df_v3n36 = read.csv(
+  fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36.csv"), 
+  header=TRUE)
+
+df_v3n36_users = read.csv(
+  fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36_users.csv"),
+  header=TRUE)
+
+
+# drop returned
+df_v2n48_users <- filter(df_v2n48_users, status!="RETURNED") # 50
+df_v3n36_users <- filter(df_v3n36_users, status!="RETURNED") # 37
+df_v2n48 <- filter(df_v2n48, status!="RETURNED")
+df_v3n36 <- filter(df_v3n36, status!="RETURNED")
+
+
+# Create new dfs 
+
+#TODO fix so no error; upon import, treating all text areas as factors instead of character vectors
+
+v2columns <- c("effectivenessRestudy", "effectivenessGenerate", "chosenStrategy", "effectivenessChosenStrategy", "effort")
+df_v2n48_users[,v2columns] <- as.factor(NA)
+df_v2n48_v3n36_users = union(df_v2n48_users, df_v3n36_users)
+
+df_v2n48[,v2columns] <- as.factor(NA)
+df_v2n48_v3n36 = union(df_v2n48, df_v3n36)
+
+
+# drop excluded 
+
+# calculate summary stats across group
+m_restudyScore <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); m_restudyScore # 8.7
+s_restudyScore <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); s_restudyScore # 2
+
+# drop at user level
+df_v2n48_v3n36_users <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2*s_restudyScore)
+df_v2n48_users <- filter(df_v2n48_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2*s_restudyScore)
+df_v3n36_users <- filter(df_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2*s_restudyScore)
+
+# drop at item level
+df_v2n48_v3n36 <- filter(df_v2n48_v3n36, prolificId %in% df_v2n48_v3n36_users$prolificId)
+df_v2n48 <- filter(df_v2n48, prolificId %in% df_v2n48_users$prolificId)
+df_v3n36 <- filter(df_v3n36, prolificId %in% df_v3n36_users$prolificId)
+
+```
+
+Now let's look at levenshtein distance as a scoring criteria. 
+
+```{r examining exclusion criteria using levdist}
+
+pids_r9 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 <9)$prolificId
+pids_ld1 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 <9)$prolificId
+pids_ld2 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 <9)$prolificId
+pids_ld3 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist3 <9)$prolificId
+pids_ld4 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist4 <9)$prolificId
+pids_ld5 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist5 <9)$prolificId
+
+
+filter(df_v2n48_v3n36, prolificId %in% pids_r9 & interventionStrategy=="restudy")[c(
+  "prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+filter(df_v2n48_v3n36, prolificId %in% pids_ld1 & interventionStrategy=="restudy")[c(
+  "prolificId", "itemEnglish", "interventionStrategyUserInputRound1")]
+
+```
+
+Just looking at levDist 1 and levDist2, we see that there are lots of little typos that seem mostly correct
+
+Does levDist1 and levDist2 score correlate better with restudyStrategy?
+
+```{r correlations}
+
+cor.test(df_v2n48_v3n36$interventionStrategyRestudyScoreRound1, df_v2n48_v3n36$interventionTestRestudyScore) # r=0.30
+cor.test(df_v2n48_v3n36$interventionStrategyRestudyScoreRound1, df_v2n48_v3n36$interventionTestRestudyScoreLevDist1) # r=0.27
+cor.test(df_v2n48_v3n36$interventionStrategyRestudyScoreRound1, df_v2n48_v3n36$interventionTestRestudyScoreLevDist2) # r=0.24
+
+cor.test(df_v2n48_v3n36$interventionStrategyRestudyScoreRound1, df_v2n48_v3n36$assessmentTestScore) # r=0.35
+
+#cor(studies1_2.filter.xy.strategy, use="complete.obs")
+#factr4.cor.studies1_2.filter.xy.strategy = mat.sort(cor.strategy, f = fact.studies1_2.filter.xy.strategy.r4)
+#corrplot(factr4.cor.studies1_2.filter.xy.strategy, tl.col='black', tl.cex=.75)
+
+apa.cor.table(df_v2n48_v3n36[c(
+  "interventionStrategyRestudyScoreRound1",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "assessmentTestScore",
+  "interventionTestRestudyScoreLevDist1",
+  "interventionTestGenerateScoreLevDist1",
+  "assessmentTestScoreLevDist1",
+  "interventionTestRestudyScoreLevDist2",
+  "interventionTestGenerateScoreLevDist2",
+  "assessmentTestScoreLevDist2")])
+
+
+corrplot.mixed(cor(df_v2n48_v3n36[c(
+  "interventionStrategyRestudyScoreRound1",
+  "interventionTestRestudyScore",
+  "interventionTestGenerateScore",
+  "assessmentTestScore",
+  "interventionTestRestudyScoreLevDist1",
+  "interventionTestGenerateScoreLevDist1",
+  "assessmentTestScoreLevDist1",
+  "interventionTestRestudyScoreLevDist2",
+  "interventionTestGenerateScoreLevDist2",
+  "assessmentTestScoreLevDist2")]), tl.col='black', tl.cex=.75)
+
+
+```
+
+Another metric: intervention effect
+```{r intervention effect}
+df_v2n48_v3n36_users$condition <- factor(df_v2n48_v3n36_users$condition,
+                                         levels=c(0,1),
+                                         labels=c("control", "expt"))
+
+summary(lm(assessmentTestScore ~ condition, df_v2n48_v3n36_users))
+summary(lm(assessmentTestScoreLevDist1 ~ condition, df_v2n48_v3n36_users))
+summary(lm(assessmentTestScoreLevDist2 ~ condition, df_v2n48_v3n36_users))
+
+summary(lm(assessmentTestScore ~ condition * interventionOutcome, df_v2n48_v3n36_users))
+summary(lm(assessmentTestScoreLevDist1 ~ condition * interventionOutcome, df_v2n48_v3n36_users))
+summary(lm(assessmentTestScoreLevDist2 ~ condition * interventionOutcome, df_v2n48_v3n36_users))
+
+
+```
+Plots
+```{r intervention effect plots}
+# means and errorbars, Assessment test score
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="assessmentTestScore" & !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScore") + facet_wrap(facet=vars(condition))
+
+# means and errorbars, Assessment test score Levdist1
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScoreLevDist1, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="assessmentTestScoreLevDist1" & !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScoreLevDist1") + facet_wrap(facet=vars(condition))
+
+# means and errorbars, Assessment test score Levdist2
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", assessmentTestScoreLevDist2, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "interventionOutcome", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+filter(means, measures=="assessmentTestScoreLevDist2" & !is.na(interventionOutcome)) %>% ggplot(aes(interventionOutcome, mean)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentTestScoreLevDist2") + facet_wrap(facet=vars(condition))
+
+```
+
+
+No...
+
+
+
+Final decision, after meeting with Dan on 2019-12-13: No need to correct scores. Doesn't seem to make a difference.
+

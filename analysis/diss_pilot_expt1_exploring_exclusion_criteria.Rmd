@@ -1,0 +1,607 @@
+---
+title: "diss_pilot_expt1_analysis"
+author: "Katie"
+date: "10/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(lme4)
+library(lmerTest) # p-values on lmer
+source("summarySE.R")
+library(corrplot)
+library(plyr) # for ddply, calculating means for histograms
+#library(ggpubr) # for balloon plot
+
+
+# differences in avgs btw groups
+# hierarchical: differences btw groups, controlling for participant
+```
+
+```{r import data}
+dir_proj <- here::here()
+dir_data <- fs::path(dir_proj, "data")
+
+df_v1n6 = read.csv(
+  fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"),
+  header=TRUE)
+
+df_v2n48 = read.csv(
+  fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48.csv"),
+  header=TRUE)
+
+df_v2n48_users = read.csv(
+  fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48_users.csv"),
+  header=TRUE)
+
+df_v3n36 = read.csv(
+  fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36.csv"), 
+  header=TRUE)
+
+df_v3n36_users = read.csv(
+  fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36_users.csv"),
+  header=TRUE)
+
+# drop returned
+df_v2n48_users <- filter(df_v2n48_users, status!="RETURNED") # 50
+df_v3n36_users <- filter(df_v3n36_users, status!="RETURNED") # 37
+df_v2n48 <- filter(df_v2n48, status!="RETURNED")
+df_v3n36 <- filter(df_v3n36, status!="RETURNED")
+
+# Create new dfs ##################################################################
+
+#TODO fix so no error 
+
+v2columns <- c("effectivenessRestudy", "effectivenessGenerate", "chosenStrategy", "effectivenessChosenStrategy", "effort")
+df_v2n48_users[,v2columns] <- as.factor(NA)
+df_v2n48_v3n36_users = union(df_v2n48_users, df_v3n36_users)
+
+df_v2n48[,v2columns] <- as.factor(NA)
+df_v2n48_v3n36 = union(df_v2n48, df_v3n36)
+
+```
+
+```{r wrangle data}
+
+#best strategy at outcome
+df_v2n48_v3n36_users$diff_score <- df_v2n48_v3n36_users$interventionTestRestudyScore - df_v2n48_v3n36_users$interventionTestGenerateScore
+
+
+#effectiveness rating
+rating <- c(
+  "extremely" = 1.69,
+  "very" = 1.46,
+  "moderately" = .66,
+  "slightly" = .44,
+  "not" = 0
+)
+
+#best strategy at rating
+
+df_v3n36_users$effectivenessRestudy_num <- rating[as.character(df_v3n36_users$effectivenessRestudy)]
+df_v3n36_users$effectivenessGenerate_num <- rating[as.character(df_v3n36_users$effectivenessGenerate)]
+df_v3n36_users$effectivenessChosenStrategy_num <- rating[as.character(df_v3n36_users$effectivenessChosenStrategy)]
+
+#effort rating; Carey 2010 Verbal label tables
+effortRating <- c(
+  "greatdeal" = 77,
+  "alot" = 55,
+  "moderate" = 43,
+  "alittle" = 12,
+  "not" = 0
+)
+
+#best strategy at rating
+
+df_v3n36_users$effort_num <- effortRating[as.character(df_v3n36_users$effort)]
+
+```
+
+
+
+# Decide criteria upon which to drop participants
+
+First, we can plot various exclusion criteria against the strict intervention test restudyScore (with no leniency for misspelling on the intervention test).
+
+```{r plot exclusion criteria vs. restudyScore}
+
+# Incomplete/missing data #######################################################
+# TODO
+
+# Too shitty of scores on restudy copy ###########################################
+# stringent scoring, exact match of correct answer
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreRound1,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1>=9)) / ntotal # 60 participants; 64.5%
+
+# levdist1
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist1,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1>=9)) / ntotal # 70 participants; 75%
+
+# levdist2
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist2,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2>=9)) / ntotal # 73 participants; 78%
+
+# levdist3
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist3,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist3>=9)) / ntotal # 75 participants; 81%
+
+# levdist4 *I'm choosing this one
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist4,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist4>=9)) / ntotal # 79 participants; 85%
+
+# levdist5
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist5,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist5>=9)) / ntotal # 84 participants; 90%
+
+# levdist6
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist6,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# levdist7
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist7,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# levdist8
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist8,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# levdist9
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist9,
+                interventionTestRestudyScore)) +
+  geom_point() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# drop rejected (I rejected them manually; better to use an objective criteria)
+# df_v1n6 <- df_v1n6[!(df_v1n6$status=="REJECTED"),]
+# df_v2n48 <- df_v2n48[!(df_v2n48$status=="REJECTED"),]
+# df_v3n36 <- df_v3n36[!(df_v3n36$status=="REJECTED"),]
+
+```
+
+There is a hint of a step function with the no-wiggle restudyScore, and in levDist 2, 3, and 4 as well. If you score less than 9 under these scoring criteria, you perform markedly worse on the test.
+
+But maybe we should apply the same scoring criteria to both the strategy input and the intervention test restudyScore, because this is what we would do in the actual study were we to apply the scoring criteria. We can visualize this with the same plots (+jitter).
+
+```{r exclusion criteria vs. levDist adjusted restudyScore}
+
+# Incomplete/missing data #######################################################
+# TODO
+
+# Too shitty of scores on restudy copy ###########################################
+# stringent scoring, exact match of correct answer
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreRound1,
+                interventionTestRestudyScore)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nremaining <- nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1>=9)); nremaining
+nremaining / ntotal # 60 participants; 64.5%
+
+# levdist1
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist1,
+                interventionTestRestudyScoreLevDist1)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nremaining <- nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1>=9)); nremaining
+nremaining / ntotal # 70 participants; 75%
+
+# levdist2
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist2,
+                interventionTestRestudyScoreLevDist2)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nremaining <- nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2>=9)); nremaining 
+nremaining / ntotal # 73 participants; 78%
+
+# levdist3
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist3,
+                interventionTestRestudyScoreLevDist3)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nremaining <- nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist3>=9)); nremaining 
+nremaining / ntotal # 75 participants; 81%
+
+# levdist4 *I'm choosing this one
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist4,
+                interventionTestRestudyScoreLevDist4)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nremaining <- nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist4>=9)); nremaining 
+nremaining / ntotal # 79 participants; 85%
+
+# levdist5
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist5,
+                interventionTestRestudyScoreLevDist5)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+ntotal <- nrow(df_v2n48_v3n36_users); ntotal
+nremaining <- nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist5>=9)); nremaining 
+nremaining / ntotal # 84 participants; 90%
+
+# levdist6
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist6,
+                interventionTestRestudyScoreLevDist6)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# levdist7
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist7,
+                interventionTestRestudyScoreLevDist7)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# levdist8
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist8,
+                interventionTestRestudyScoreLevDist8)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+# levdist9
+df_v2n48_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist9,
+                interventionTestRestudyScoreLevDist9)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,11,1))
+
+```
+
+A similar pattern emerges, with step functions for <9 on no wiggle, and levDist 2 and 3. How would you decide which criteria to use, though? 
+
+Maybe what's simpler is just to use a SD cutoff criteria.
+
+```{r exclusion criteria using SD}
+
+
+m_restudyScore <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T)
+s_restudyScore <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T)
+
+m_restudyScoreLD1 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist1, na.rm=T)
+s_restudyScoreLD1 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist1, na.rm=T)
+
+m_restudyScoreLD2 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist2, na.rm=T)
+s_restudyScoreLD2 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist2, na.rm=T)
+
+m_restudyScoreLD3 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist3, na.rm=T)
+s_restudyScoreLD3 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist3, na.rm=T)
+
+m_restudyScoreLD4 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist4, na.rm=T)
+s_restudyScoreLD4 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist4, na.rm=T)
+
+m_restudyScoreLD5 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist5, na.rm=T)
+s_restudyScoreLD5 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist5, na.rm=T)
+
+# group users
+filter(df_v2n48_v3n36, status!="APPROVED" & interventionStudyOrder==1)$prolificId
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2*s_restudyScore)) #82
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 2*s_restudyScore)$prolificId
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 >= m_restudyScoreLD1 - 2*s_restudyScoreLD1)) #85
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 < m_restudyScoreLD1 - 2*s_restudyScoreLD1)$prolificId 
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 >= m_restudyScoreLD2 - 2*s_restudyScoreLD2)) #85
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 < m_restudyScoreLD2 - 2*s_restudyScoreLD2)$prolificId 
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist3 >= m_restudyScoreLD3 - 2*s_restudyScoreLD3)) #85
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist4 >= m_restudyScoreLD4 - 2*s_restudyScoreLD4)) #84
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist5 >= m_restudyScoreLD5 - 2*s_restudyScoreLD5)) #84
+
+## 2.5 SD
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2.5*s_restudyScore)) #84
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 >= m_restudyScoreLD1 - 2.5*s_restudyScoreLD1)) #85
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 >= m_restudyScoreLD2 - 2.5*s_restudyScoreLD2)) #85
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist3 >= m_restudyScoreLD3 - 2.5*s_restudyScoreLD3)) #85
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist4 >= m_restudyScoreLD4 - 2.5*s_restudyScoreLD4)) #85
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist5 >= m_restudyScoreLD5 - 2.5*s_restudyScoreLD5)) #86
+
+```
+
+We can look at who would be excluded under each criteria. Looking manually (see Google Sheet 2019-12-10_deciding_exclusion_criteria), we find that the "Restudy score <m-2s" criteria does better than the "Levdist 1 <m-2s" and "Levdist 2 <m-2s" criteria.
+
+But how about the "Levdist N <9" criteria we were toying with before?
+
+```{r examining exclusion criteria using levdist}
+
+pids_r9 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 <9)$prolificId
+pids_ld1 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 <9)$prolificId
+pids_ld2 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 <9)$prolificId
+pids_ld3 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist3 <9)$prolificId
+pids_ld4 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist4 <9)$prolificId
+pids_ld5 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist5 <9)$prolificId
+
+
+# just looked at these to gut check if anyone was excluded by these levdist criteria that we would have missed excluding by the SD criteria. It looks okay, if we're lenient about copying the swahili once in a while (make sense that people would get mixed up)
+
+filter(df_v2n48_v3n36, 
+       status != "RETURNED" &
+       prolificId %in% pids_r9 & 
+       interventionStrategy=="restudy"
+       )[c(
+  "prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+filter(df_v2n48_v3n36, prolificId %in% pids_ld1 & interventionStrategy=="restudy")[c(
+  "prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+```
+
+Looking at noWiggle <9, it may be too harsh.
+
+
+Let's compare the criteria outright
+```{r}
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= 9)) #59
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 >= 9)) #69
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 >= 9)) #72
+
+m_restudyScore <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T)
+s_restudyScore <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T)
+
+m_restudyScoreLD1 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist1, na.rm=T)
+s_restudyScoreLD1 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist1, na.rm=T)
+
+m_restudyScoreLD2 <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist2, na.rm=T)
+s_restudyScoreLD2 <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreLevDist2, na.rm=T)
+
+
+## 2 SD
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2*s_restudyScore)) #81
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 2*s_restudyScore)$prolificId
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 >= m_restudyScoreLD1 - 2*s_restudyScoreLD1)) #81
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 < m_restudyScoreLD1 - 2*s_restudyScoreLD1)$prolificId 
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 >= m_restudyScoreLD2 - 2*s_restudyScoreLD2)) #82
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 < m_restudyScoreLD2 - 2*s_restudyScoreLD2)$prolificId
+
+
+## 2.5 SD
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2.5*s_restudyScore)) #82
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 < m_restudyScoreLD1 - 2.5*s_restudyScoreLD1)$prolificId 
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 >= m_restudyScoreLD1 - 2.5*s_restudyScoreLD1)) #82
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 >= m_restudyScoreLD2 - 2.5*s_restudyScoreLD2)) #82
+
+
+## 3 SD
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 3*s_restudyScore)) #82
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 3*s_restudyScore)$prolificId
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 >= m_restudyScoreLD1 - 3*s_restudyScoreLD1)) #82
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 < m_restudyScoreLD1 - 3*s_restudyScoreLD1)$prolificId 
+
+nrow(filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 >= m_restudyScoreLD2 - 3*s_restudyScoreLD2)) #82
+filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 < m_restudyScoreLD2 - 3*s_restudyScoreLD2)$prolificId
+
+
+## examining excluded individuals
+filter(df_v2n48_v3n36, interventionStrategy=="restudy" & prolificId=="5d4b1ad811499700017452cb")[c("prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+pids_r9 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 <9)$prolificId #26 excluded
+pids_ld1 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist1 <9)$prolificId #16 excluded
+pids_ld2 <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreLevDist2 <9)$prolificId #13 excluded
+pids_r2sd <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 2*s_restudyScore)$prolificId #4 excluded
+
+filter(df_v2n48_v3n36, interventionStrategy=="restudy" & prolificId %in% pids_r9 & !(prolificId %in% pids_r2sd))[c("prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+filter(df_v2n48_v3n36, interventionStrategy=="restudy" & prolificId %in% pids_ld2 & !(prolificId %in% pids_r2sd))[c("prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+
+```
+ We could look at their effort ratings, among the n=36
+```{r}
+
+df_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreRound1,
+                effort_num)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,100,10))
+
+# levdist1
+df_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist1,
+                effort_num)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,100,10))
+
+# levdist2
+df_v3n36_users %>% 
+  ggplot(., aes(interventionStrategyRestudyScoreLevDist2,
+                effort_num)) +
+  geom_jitter() + geom_smooth(method='loess') +
+  scale_x_continuous(breaks=seq(0,11,1)) +
+  scale_y_continuous(breaks=seq(0,100,10))
+
+
+moderate_effort <- filter(df_v3n36_users, effort_num <50)$prolificId; length(moderate_effort)
+filter(df_v3n36, interventionStrategy=="restudy" & prolificId %in% moderate_effort)[c("prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+alittle_effort <- filter(df_v3n36_users, effort_num <15)$prolificId; length(alittle_effort)
+filter(df_v3n36, interventionStrategy=="restudy" & prolificId %in% alittle_effort)[c("prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+
+```
+
+I don't think we want to exclude people at a particular effort threshold. Even one of the 2 people who said they did "a little effort" or less did pretty well.
+ 
+
+
+
+Do people performing under our exclusion criteria perform significantly worse?
+```{r}
+
+m_restudyScore <- mean(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); m_restudyScore # 8.7
+s_restudyScore <- sd(df_v2n48_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); s_restudyScore # 2
+
+# participants had to get 8.7-2*2 ~= 5 or more perfectly correct during restudyStrategy input to be included.
+
+included <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 2*s_restudyScore) #81
+excluded <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 2*s_restudyScore) #4
+
+t.test(included$interventionStrategyRestudyScoreRound1, excluded$interventionStrategyRestudyScoreRound1) # sig
+t.test(included$interventionStrategyRestudyScoreLevDist1, excluded$interventionStrategyRestudyScoreLevDist1) #sig
+t.test(included$interventionStrategyRestudyScoreLevDist2, excluded$interventionStrategyRestudyScoreLevDist2) #sig
+t.test(included$interventionStrategyRestudyScoreLevDist3, excluded$interventionStrategyRestudyScoreLevDist3) #sig
+t.test(included$interventionTestRestudyScore, excluded$interventionTestRestudyScore) # trend
+t.test(included$interventionTestRestudyScoreLevDist1, excluded$interventionTestRestudyScoreLevDist1) # trend
+t.test(included$interventionTestRestudyScoreLevDist2, excluded$interventionTestRestudyScoreLevDist2) # trend
+t.test(included$interventionTestRestudyScoreLevDist3, excluded$interventionTestRestudyScoreLevDist3) # sig
+t.test(included$interventionStrategyGenerateScoreRound1, excluded$interventionStrategyGenerateScoreRound1) # sig! this is important
+t.test(included$diff_score, excluded$diff_score) # n.s.
+t.test(included$interventionTestGenerateScore, excluded$interventionTestGenerateScore) # n.s.
+t.test(included$assessmentTestScore, excluded$assessmentTestScore) # n.s.
+t.test(included$assessmentTestScoreLevDist4, excluded$assessmentTestScoreLevDist4) # n.s.
+
+
+included <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 3*s_restudyScore) #82
+excluded <- filter(df_v2n48_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 3*s_restudyScore) #3
+
+t.test(included$interventionStrategyRestudyScoreRound1, excluded$interventionStrategyRestudyScoreRound1) # sig
+t.test(included$interventionStrategyRestudyScoreLevDist1, excluded$interventionStrategyRestudyScoreLevDist1) #sig
+t.test(included$interventionStrategyRestudyScoreLevDist2, excluded$interventionStrategyRestudyScoreLevDist2) #sig
+t.test(included$interventionStrategyRestudyScoreLevDist3, excluded$interventionStrategyRestudyScoreLevDist3) #sig
+
+t.test(included$interventionTestRestudyScore, excluded$interventionTestRestudyScore) # ns
+t.test(included$interventionTestRestudyScoreLevDist1, excluded$interventionTestRestudyScoreLevDist1) # ns
+t.test(included$interventionTestRestudyScoreLevDist2, excluded$interventionTestRestudyScoreLevDist2) # ns
+t.test(included$interventionTestRestudyScoreLevDist3, excluded$interventionTestRestudyScoreLevDist3) # ns
+
+t.test(included$interventionStrategyGenerateScoreRound1, excluded$interventionStrategyGenerateScoreRound1) # sig
+
+t.test(included$diff_score, excluded$diff_score) # n.s.
+
+t.test(included$interventionTestGenerateScore, excluded$interventionTestGenerateScore) # n.s.
+
+t.test(included$avgAssessmentStrategyRevealLatency, excluded$avgAssessmentStrategyRevealLatency) # n.s.
+t.test(included$avgAssessmentStrategyMoveOnLatency, excluded$avgAssessmentStrategyMoveOnLatency) # n.s.
+t.test(included$assessmentTestScore, excluded$assessmentTestScore) # n.s.
+t.test(included$assessmentTestScoreLevDist4, excluded$assessmentTestScoreLevDist4) # n.s.
+
+
+included <- filter(df_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore - 3*s_restudyScore) #35
+excluded <- filter(df_v3n36_users, interventionStrategyRestudyScoreRound1 < m_restudyScore - 3*s_restudyScore) #1
+
+t.test(included$effectivenessGenerate_num, excluded$effectivenessGenerate_num) # not enough
+t.test(included$effectivenessRestudy_num, excluded$effectivenessRestudy_num) # not enough
+t.test(included$effectivenessChosenStrategy_num, excluded$effectivenessChosenStrategy_num) # not enough
+
+filter(df_v2n48_v3n36, interventionStrategy=="restudy" & prolificId %in% excluded$prolificId)[c("prolificId", "itemEnglish", "interventionStrategyUserInputRound1", "interventionTestUserInput")]
+
+```
+Excluded do sig worse on copying
+Trend that they do worse on the test of copied/restudied words
+Sig worse on generating
+No diff on test of generated words
+No diff on final test of next 20 words
+
+Now I'm struggling. They don't do worse in the end. But, I think it's enough that they do worse during strategy; it means they didn't get the full experience of doing the strategies correctly. So, their experience is off, their feedback is off, and their intervention results will be off.
+
+Final answer: drop those with nowiggle restudyScores 2SD below the mean.
+
+Update after talking to Dan on 2019-12-13: Final answer, drop those with nowiggle restudyScores 3SD below the mean. More standard.
+
+
+
+
