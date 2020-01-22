@@ -340,6 +340,8 @@ df_users = df_users[[
   "assessmentTestScore",
   "assessmentTestScoreLevDist1",
   "assessmentTestScoreLevDist2",
+  "totalScore",
+  "bonusPayment",
   "effectivenessRestudy",
   "effectivenessRestudy_num",
   "effectivenessGenerate",
@@ -406,12 +408,16 @@ df_users_items = df_users_items.sort_values([
   'assessmentStrategyOrder'
 ])
 
-
 ### Add prolific data! 
 #(removes the rows that don't have corresponding ids in the prolific file)
 df_users_items = df_prolific.join(df_users_items, how='inner')
 df_users = df_prolific.join(df_users, how='inner')
 
+### Create df for bonuses
+df_bonus = df_users_items[[
+  'prolificId',
+  'bonusPayment'
+]]
 
 ### Output to csv for R
 df_users_items.to_csv(
@@ -426,5 +432,13 @@ df_users.to_csv(
   "../data/{datePrefix}_diss-pilot-expt1_df-users-items_{versionSampleSuffix}_users.csv".format(
     datePrefix=datePrefix,
     versionSampleSuffix=versionSampleSuffix
+  ), encoding='utf-8'
+)
+
+### Output to csv for bonus payment
+df_bonus.to_csv(
+  "../data/{datePrefix}_diss-pilot-expt1_df-users-items_{versionSampleSuffix}_bonusPayment.csv".format(
+  datePrefix=datePrefix,
+  versionSampleSuffix=versionSampleSuffix
   ), encoding='utf-8'
 )

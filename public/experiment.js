@@ -509,6 +509,8 @@ function runExpt(){
     assessmentStrategyOrderCounter: 0,
     assessmentTestOrderCounter: 0,
     assessmentTestScore: 0,
+    totalScore: 0,
+    bonusPayment: 0,
 
     /* alert tracking */
     validatePredictionFormAlerted: false,
@@ -1362,7 +1364,12 @@ function runExpt(){
     end: function() {
       var endDateTime = new Date();
       updateUserEndDateTime(experiment.prolificId, endDateTime);
+      experiment.totalScore = interventionTestRestudyScore + interventionTestGenerateScore + assessmentTestScore;
+      experiment.bonusPayment = totalScore * .05;
+      var bonusPaymentText = `Across the two quizzes, you typed ${experiment.totalScore} correct English
+        translations, which means you earned $ ${experiment.bonusPayment} in bonus payments.`
       showSlide("end");
+      $("#bonusPaymentText").html( );
       $("#redirectButton").click(function(){$(this).blur(); experiment.redirect();});
     },
 
