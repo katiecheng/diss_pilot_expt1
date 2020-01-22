@@ -775,20 +775,23 @@ function runExpt(){
         secondPredictionReason = $("#secondPredictionReason").val();
       
       if (!(firstPrediction >= 0 & firstPrediction <= experiment.numTrials/4 &
-            secondPrediction >= 0 & secondPrediction <= experiment.numTrials/4)){
-        errorLog += `We noticed that one or more of your predictions is not a number in the range from 0 to ${experiment.numTrials/4}. It would be a huge help to us if you could give us your best prediction in this range. But if you'd prefer not to, you can click the "Next" button below.\n\n`;
+            secondPrediction >= 0 & secondPrediction <= experiment.numTrials/4) ||
+        (firstPrediction.length === 0 || secondPrediction.length === 0)
+        ){
+        errorLog += `Please make sure each of your predictions is a number in the range from 0 to ${experiment.numTrials/4}.\n\n`
+        // errorLog += `We noticed that one or more of your predictions is not a number in the range from 0 to ${experiment.numTrials/4}. It would be a huge help to us if you could give us your best prediction in this range. But if you'd prefer not to, you can click the "Next" button below.\n\n`;
         fail = true;
-        // return false; 
       } 
       if (!$.trim($("#firstPredictionReason").val()) |
                  !$.trim($("#secondPredictionReason").val())) {
-        errorLog += `We noticed that you did not provide reasons for one or more of your predictions. It would be a huge help to us if you could share your reasoning. But if you'd prefer not to, you can click the "Next" button below.`;
+        errorLog += `Please provide reasons for your predictions.`
+        // errorLog += `We noticed that you did not provide reasons for one or more of your predictions. It would be a huge help to us if you could share your reasoning. But if you'd prefer not to, you can click the "Next" button below.`;
         fail = true;
       } 
       if (fail) {
         if (!experiment.validatePredictionFormAlerted){
           alert(errorLog);
-          experiment.validatePredictionFormAlerted = true;
+          // experiment.validatePredictionFormAlerted = true; // toggle to allow empty
         } else { 
           experiment.capturePrediction(firstPrediction, firstPredictionReason,
             secondPrediction, secondPredictionReason);
@@ -1314,10 +1317,11 @@ function runExpt(){
 
     validateQuestionnaire: function(){
       var fail = false,
-        errorLog = "We noticed that you did not respond to some of our questions. It would be a huge help to us if you could please respond to\n",
-        names = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5']
+        errorLog = "Please check your response to the following questions:\n"
+        //errorLog = "We noticed that you did not respond to some of our questions. It would be a huge help to us if you could please respond to\n",
+        names = ['Q1a', 'Q1b', 'Q2a', 'Q2b', 'Q3a', 'Q3b', 'Q3c', 'Q4a', 'Q4b', 'Q5', 'Q6']
       for (name of names){
-        if (name == 'Q3'){ 
+        if (name == 'Q3a' || name == 'Q5'){
           // strategy textarea, trim whitespace
           if (!$.trim($("#Q3").val())){
             fail = true;
@@ -1331,9 +1335,9 @@ function runExpt(){
       }        
       if (fail) {
         if (!experiment.validateQuestionnaireAlerted){
-          errorLog += `But if you'd prefer not to, you can click the "Next" button below.\n`;
+          // errorLog += `But if you'd prefer not to, you can click the "Next" button below.\n`;
           alert(errorLog);
-          experiment.validateQuestionnaireAlerted = true;
+          // experiment.validateQuestionnaireAlerted = true;  // toggle to allow empty
         } else {
         experiment.captureQuestionnaire();
         }
