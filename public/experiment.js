@@ -355,7 +355,9 @@ function getCondition(){
     });
     runExpt();
     // Show the instructions slide -- this is what we want subjects to see first.
-    showSlide("getProlificId");
+    // showSlide("getProlificId");
+    experiment.questionnaire(); 
+    showSlide("questionnaire");
   });
 }
 
@@ -1246,27 +1248,63 @@ function runExpt(){
     },
 
     questionnaire: function() {
-      var restudyQuestionText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
-        the <b>review</b> strategy--you reviewed the English translation by copying it 
-        into the textbox.<br><br>In general, how effective is the <b>review</b> strategy?`;
-      
-      var generateQuestionText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
-        the <b>recall</b> strategy--you tried to recall the English translation 
-      from memory.<br><br>In general, how effective is the <b>recall</b> strategy?`;
+      var restudyReminderText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
+        the <b>review</b> strategy--you reviewed the English translation by copying it into the textbox.`;
+      var generateReminderText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
+        the <b>recall</b> strategy--you tried to recall the English translation from memory.`;
+
+      var restudyEffectiveText = `In general, how effective is the <b>review</b> strategy?`;
+      var generateEffectiveText = `In general, how effective is the <b>recall</b> strategy?`;
+
+      var restudyEffortText = `In general, how much effort does the <b>review</b> strategy require?`;
+      var generateEffortText = `In general, how much effort does the <b>recall</b> strategy require?`;
+
+        //TODO DECIDE: `You could study using whatever strategy you chose`
+      var howManyText = `In the second round of learning, you could study the ${experiment.numTrials/2} Swahili-English 
+      word pairs using any strategy you chose.`
+      var restudyHowManyText = `For how many of these pairs did you use <b>review</b> (i.e. attempting to review 
+      the English translation) as part of your self-paced study strategy?`;
+      var generateHowManyText = `For how many of these pairs did you use <b>recall</b> (i.e. attempting to recall 
+      the English translation) as part of your self-paced study strategy?`;
+
+
 
       if (experiment.predictRestudyFirst){
         // predict restudy first, then predict generate
-        var firstQuestionText = restudyQuestionText;
-        var secondQuestionText = generateQuestionText;
+        // var firstQuestionText = restudyQuestionText;
+        // var secondQuestionText = generateQuestionText;
+        var firstReminderText = restudyReminderText;
+        var firstEffectiveText = restudyEffectiveText;
+        var firstEffortText = restudyEffortText;
+        var firstHowManyText = restudyHowManyText;
+        var secondReminderText = generateReminderText;
+        var secondEffectiveText = generateEffectiveText;
+        var secondEffortText = generateEffortText;
+        var secondHowManyText = generateHowManyText;
       } else {
         // predict generate first, then predict restudy
-        var firstQuestionText = generateQuestionText;
-        var secondQuestionText = restudyQuestionText;
+        // var firstQuestionText = generateQuestionText;
+        // var secondQuestionText = restudyQuestionText;
+        var firstReminderText = generateReminderText;
+        var firstEffectiveText = generateEffectiveText;
+        var firstEffortText = generateEffortText;
+        var firstHowManyText = generateHowManyText;
+        var secondReminderText = restudyReminderText;
+        var secondEffectiveText = restudyEffectiveText;
+        var secondEffortText = restudyEffortText;
+        var secondHowManyText = restudyHowManyText;
       }
 
       showSlide("questionnaire");
-      $("#firstQuestionText").html(firstQuestionText);
-      $("#secondQuestionText").html(secondQuestionText);
+      $("#firstReminderText").html(firstReminderText);
+      $("#firstEffectiveText").html(firstEffectiveText);
+      $("#firstEffortText").html(firstEffortText);
+      $("#firstHowManyText").html(firstHowManyText);
+      $("#secondReminderText").html(secondReminderText);
+      $("#secondEffectiveText").html(secondEffectiveText);
+      $("#secondEffortText").html(secondEffortText);
+      $("#secondHowManyText").html(secondHowManyText);
+      $("#howManyText").html(howManyText);
       $("#questionnaireNextButton").click(function(){$(this).blur(); 
         $("#questionnaireForm").submit(experiment.validateQuestionnaire());
       })
