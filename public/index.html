@@ -40,7 +40,7 @@
     <p>Please enter your Prolific ID here:</p>
   </div>
   <div style="text-align: center">
-    <form id="generatedForm" name="generatedForm" autocomplete="off"
+    <form id="prolificIdForm" name="prolificIdForm" autocomplete="off"
     onkeypress="return event.keyCode != 13;">
       <input style="margin-left: 10px" id="prolificId" name="prolificId">
       <div style="text-align: center">
@@ -248,41 +248,80 @@
     <p> Next, we'll ask you a few questions about your experience with the study. Please be honest. Your responses to the following questions will not affect your participation or compensation.</p><br>
     <form id="questionnaireForm" name="questionnaireForm" autocomplete="off"
       onkeypress="return event.keyCode != 13;">
+
       <h2>Question 1</h2>
-      <p id="firstQuestionText" class="block-text">{{}}</p>
-      <input type="radio" name="Q1" value="extremely">Extremely effective<br>
-      <input type="radio" name="Q1" value="very">Very effective<br>
-      <input type="radio" name="Q1" value="moderately">Moderately effective<br>
-      <input type="radio" name="Q1" value="slightly">Slightly effective<br>
-      <input type="radio" name="Q1" value="not">Not at all effective<br>
+      <p id="firstReminderText" class="block-text">{{}}</p>
+      <p><b>1a. </b><span id="firstEffectiveText" class="block-text">{{}}</span></p>
+      <input type="radio" name="Q1a" value="extremely">Extremely effective<br>
+      <input type="radio" name="Q1a" value="very">Very effective<br>
+      <input type="radio" name="Q1a" value="moderately">Moderately effective<br>
+      <input type="radio" name="Q1a" value="slightly">Slightly effective<br>
+      <input type="radio" name="Q1a" value="not">Not at all effective<br>
       <br>
+      <p><b>1b. </b><span id="firstEffortText" class="block-text">{{}}</span></p>
+      <input type="radio" name="Q1b" value="greatdeal">A great deal of effort<br>
+      <input type="radio" name="Q1b" value="alot">A lot of effort<br>
+      <input type="radio" name="Q1b" value="moderate">A moderate amount of effort<br>
+      <input type="radio" name="Q1b" value="alittle">A little effort<br>
+      <input type="radio" name="Q1b" value="none">No effort at all<br>
+      <br>
+
       <h2>Question 2</h2>
-      <p id="secondQuestionText" class="block-text">{{}}</p>
-      <input type="radio" name="Q2" value="extremely">Extremely effective<br>
-      <input type="radio" name="Q2" value="very">Very effective<br>
-      <input type="radio" name="Q2" value="moderately">Moderately effective<br>
-      <input type="radio" name="Q2" value="slightly">Slightly effective<br>
-      <input type="radio" name="Q2" value="not">Not at all effective<br>
+      <p id="secondReminderText" class="block-text">{{}}</p>
+      <p><b>2a. </b><span id="secondEffectiveText" class="block-text">{{}}</span></p>
+      <input type="radio" name="Q2a" value="extremely">Extremely effective<br>
+      <input type="radio" name="Q2a" value="very">Very effective<br>
+      <input type="radio" name="Q2a" value="moderately">Moderately effective<br>
+      <input type="radio" name="Q2a" value="slightly">Slightly effective<br>
+      <input type="radio" name="Q2a" value="not">Not at all effective<br>
+      <br>
+      <p><b>2b. </b><span id="secondEffortText" class="block-text">{{}}</span></p>
+      <input type="radio" name="Q2b" value="greatdeal">A great deal of effort<br>
+      <input type="radio" name="Q2b" value="alot">A lot of effort<br>
+      <input type="radio" name="Q2b" value="moderate">A moderate amount of effort<br>
+      <input type="radio" name="Q2b" value="alittle">A little effort<br>
+      <input type="radio" name="Q2b" value="none">No effort at all<br>
       <br>
       <h2>Question 3</h2>
-      <p>In the second round of learning Swahili-English word pairs, the 'Learning phase' was self-paced. You could click to 'See Translation' and 'Move On' at your own pace, and you could study using whatever strategy you chose. <br><br>As best you can, please describe the strategy you used.</p>
-      <textarea id="Q3" name="Q3" rows="5" style="width: 500px"></textarea>
-      <br><br>
-      <h2>Question 4</h2>
-      <p id="thirdQuestionText" class="block-text">In general, how effective is the strategy you described above?</p>
-      <input type="radio" name="Q4" value="extremely">Extremely effective<br>
-      <input type="radio" name="Q4" value="very">Very effective<br>
-      <input type="radio" name="Q4" value="moderately">Moderately effective<br>
-      <input type="radio" name="Q4" value="slightly">Slightly effective<br>
-      <input type="radio" name="Q4" value="not">Not at all effective<br>
+      <p>In the second round of learning Swahili-English word pairs, the 'Learning phase' was self-paced. You could click to 'See Translation' and 'Move On' at your own pace, and you could study using any strategy you chose.<p>
+      <p><b>3a. </b><span>As best you can, please describe the strategy you used.</span></p>
+      <textarea id="Q3a" name="Q3a" rows="5" style="width: 500px"></textarea>
       <br>
+      <p><b>3b. </b><span id="thirdQuestionText" class="block-text">In general, how effective is the strategy you described above?</span></p>
+      <input type="radio" name="Q3b" value="extremely">Extremely effective<br>
+      <input type="radio" name="Q3b" value="very">Very effective<br>
+      <input type="radio" name="Q3b" value="moderately">Moderately effective<br>
+      <input type="radio" name="Q3b" value="slightly">Slightly effective<br>
+      <input type="radio" name="Q3b" value="not">Not at all effective<br>
+      <br>
+      <p><b>3c. </b><span id="thirdQuestionText" class="block-text">In general, how much effort does the strategy you described above require?</span></p>
+      <input type="radio" name="Q3c" value="greatdeal">A great deal of effort<br>
+      <input type="radio" name="Q3c" value="alot">A lot of effort<br>
+      <input type="radio" name="Q3c" value="moderate">A moderate amount of effort<br>
+      <input type="radio" name="Q3c" value="alittle">A little effort<br>
+      <input type="radio" name="Q3c" value="none">No effort at all<br>
+      <br>
+      <h2>Question 4</h2>
+      <p id="howManyText" class="block-text">{{}}</p>
+      <p><b>4a. </b><span id="firstHowManyText" class="block-text">{{}}</span></p>
+      <input id="Q4a" name="Q4a" type="number" min="0" max="20" required>
+      <p class="denominator" style="display:inline"></p>
+      <br>
+      <p><b>4b. </b><span id="secondHowManyText" class="block-text">{{}}</span></p>
+      <input id="Q4b" name="Q4b" type="number" min="0" max="20" required>
+      <p class="denominator" style="display:inline"></p>
+      <br><br>
       <h2>Question 5</h2>
+      <p>After your first round of learning Swahili-English word pairs, you were given information about how well you learned. Was there anything surprising about the information? Please elaborate:<p>
+      <textarea id="Q5" name="Q5" rows="5" style="width: 500px"></textarea>
+      <br><br>
+      <h2>Question 6</h2>
       <p>Overall, how much effort did you put into your participation in this study?</p>
-      <input type="radio" name="Q5" value="greatdeal">A great deal of effort<br>
-      <input type="radio" name="Q5" value="alot">A lot of effort<br>
-      <input type="radio" name="Q5" value="moderate">A moderate amount of effort<br>
-      <input type="radio" name="Q5" value="alittle">A little effort<br>
-      <input type="radio" name="Q5" value="none">No effort at all<br>
+      <input type="radio" name="Q6" value="greatdeal">A great deal of effort<br>
+      <input type="radio" name="Q6" value="alot">A lot of effort<br>
+      <input type="radio" name="Q6" value="moderate">A moderate amount of effort<br>
+      <input type="radio" name="Q6" value="alittle">A little effort<br>
+      <input type="radio" name="Q6" value="none">No effort at all<br>
       <div style="text-align: center">
         <button type="button" id="questionnaireNextButton">Next</button>
       </div>

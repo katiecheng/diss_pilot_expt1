@@ -1,6 +1,8 @@
-
 /*
 TODO
+- useful functions:
+-- building a questionnaire
+-- questionnaire validation; e.g. test if a number is between x and y
 Once I'm done testing
 - Add feedback collection
 - check for duplicate prolificIds, so it doesn't overwrite data in database
@@ -355,7 +357,9 @@ function getCondition(){
     });
     runExpt();
     // Show the instructions slide -- this is what we want subjects to see first.
-    showSlide("getProlificId");
+    // showSlide("getProlificId");
+    experiment.questionnaire(); 
+    showSlide("questionnaire");
   });
 }
 
@@ -772,13 +776,13 @@ function runExpt(){
       
       if (!(firstPrediction >= 0 & firstPrediction <= experiment.numTrials/4 &
             secondPrediction >= 0 & secondPrediction <= experiment.numTrials/4)){
-        errorLog += `We noticed that one or more of your predictions is not a number in the range from 0 to ${experiment.numTrials/4}. It would be a huge help to us if you could give us your best prediction in this range. But if you'd prefer not to, you can click the "Next" button below.\n\n`;
+        errorLog += `We noticed that one or more of your predictions is not a number in the range from 0 to ${experiment.numTrials/4}. Please give us your best prediction in this range.\n\n`;
         fail = true;
         // return false; 
       } 
       if (!$.trim($("#firstPredictionReason").val()) |
                  !$.trim($("#secondPredictionReason").val())) {
-        errorLog += `We noticed that you did not provide reasons for one or more of your predictions. It would be a huge help to us if you could share your reasoning. But if you'd prefer not to, you can click the "Next" button below.`;
+        errorLog += `We noticed that you did not provide reasons for one or more of your predictions. Please share your reasoning.`;
         fail = true;
       } 
       if (fail) {
@@ -1246,27 +1250,63 @@ function runExpt(){
     },
 
     questionnaire: function() {
-      var restudyQuestionText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
-        the <b>review</b> strategy--you reviewed the English translation by copying it 
-        into the textbox.<br><br>In general, how effective is the <b>review</b> strategy?`;
-      
-      var generateQuestionText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
-        the <b>recall</b> strategy--you tried to recall the English translation 
-      from memory.<br><br>In general, how effective is the <b>recall</b> strategy?`;
+      var restudyReminderText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
+        the <b>review</b> strategy--you reviewed the English translation by copying it into the textbox.`;
+      var generateReminderText = `In the first round of learning Swahili-English word pairs, you studied half of the word pairs using  
+        the <b>recall</b> strategy--you tried to recall the English translation from memory.`;
+
+      var restudyEffectiveText = `In general, how effective is the <b>review</b> strategy?`;
+      var generateEffectiveText = `In general, how effective is the <b>recall</b> strategy?`;
+
+      var restudyEffortText = `In general, how much effort does the <b>review</b> strategy require?`;
+      var generateEffortText = `In general, how much effort does the <b>recall</b> strategy require?`;
+
+        //TODO DECIDE: `You could study using whatever strategy you chose`
+      var howManyText = `In the second round of learning, you could study the ${experiment.numTrials/2} Swahili-English 
+      word pairs using any strategy you chose.`
+      var restudyHowManyText = `For these 20 Swahili-English word pairs, how many times was <b>review</b> 
+      (i.e. attempting to review the English translation) part of your chosen study strategy?`;
+      var generateHowManyText = `For these 20 Swahili-English word pairs, how many times was <b>recall</b> 
+      (i.e. attempting to recall the English translation) part of your chosen study strategy?`;
+
+
 
       if (experiment.predictRestudyFirst){
         // predict restudy first, then predict generate
-        var firstQuestionText = restudyQuestionText;
-        var secondQuestionText = generateQuestionText;
+        // var firstQuestionText = restudyQuestionText;
+        // var secondQuestionText = generateQuestionText;
+        var firstReminderText = restudyReminderText;
+        var firstEffectiveText = restudyEffectiveText;
+        var firstEffortText = restudyEffortText;
+        var firstHowManyText = restudyHowManyText;
+        var secondReminderText = generateReminderText;
+        var secondEffectiveText = generateEffectiveText;
+        var secondEffortText = generateEffortText;
+        var secondHowManyText = generateHowManyText;
       } else {
         // predict generate first, then predict restudy
-        var firstQuestionText = generateQuestionText;
-        var secondQuestionText = restudyQuestionText;
+        // var firstQuestionText = generateQuestionText;
+        // var secondQuestionText = restudyQuestionText;
+        var firstReminderText = generateReminderText;
+        var firstEffectiveText = generateEffectiveText;
+        var firstEffortText = generateEffortText;
+        var firstHowManyText = generateHowManyText;
+        var secondReminderText = restudyReminderText;
+        var secondEffectiveText = restudyEffectiveText;
+        var secondEffortText = restudyEffortText;
+        var secondHowManyText = restudyHowManyText;
       }
 
       showSlide("questionnaire");
-      $("#firstQuestionText").html(firstQuestionText);
-      $("#secondQuestionText").html(secondQuestionText);
+      $("#firstReminderText").html(firstReminderText);
+      $("#firstEffectiveText").html(firstEffectiveText);
+      $("#firstEffortText").html(firstEffortText);
+      $("#firstHowManyText").html(firstHowManyText);
+      $("#secondReminderText").html(secondReminderText);
+      $("#secondEffectiveText").html(secondEffectiveText);
+      $("#secondEffortText").html(secondEffortText);
+      $("#secondHowManyText").html(secondHowManyText);
+      $("#howManyText").html(howManyText);
       $("#questionnaireNextButton").click(function(){$(this).blur(); 
         $("#questionnaireForm").submit(experiment.validateQuestionnaire());
       })
@@ -1274,26 +1314,42 @@ function runExpt(){
 
     validateQuestionnaire: function(){
       var fail = false,
-        errorLog = "We noticed that you did not respond to some of our questions. It would be a huge help to us if you could please respond to\n",
-        names = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5']
+        errorLog = "We noticed that you did not provide a valid response to some of our questions. Please provide a valid response to\n",
+        names = ['Q1a', 'Q1b', 'Q2a', 'Q2b', 'Q3a', 'Q3b', 'Q3c', 'Q4a', 'Q4b', 'Q5', 'Q6']
       for (name of names){
-        if (name == 'Q3'){ 
+        if (name == 'Q3a'){ 
           // strategy textarea, trim whitespace
-          if (!$.trim($("#Q3").val())){
+          if (!$.trim($("#Q3a").val())){
             fail = true;
-            errorLog += name + "\n";
+            errorLog += name + " ";
+          }
+        } else if (name == 'Q4a') {
+          var Q4a = parseInt($("#Q4a").val())
+          console.log(Q4a)
+          if (!(Q4a >= 0 & Q4a <= experiment.numTrials/2)){
+            errorLog += name + " ";
+            fail = true;
+          }
+        } else if (name == 'Q5'){ 
+          // strategy textarea, trim whitespace
+          if (!$.trim($("#Q5").val())){
+            fail = true;
+            errorLog += name + " ";
           }
         } else if (! $("input:radio[name=inputName]".replace("inputName", name)).is(":checked")) {
           // radio buttons
           fail = true;
-          errorLog += name + "\n";
-        }
+          errorLog += name + " ";
+        } 
       }        
       if (fail) {
         if (!experiment.validateQuestionnaireAlerted){
-          errorLog += `But if you'd prefer not to, you can click the "Next" button below.\n`;
+          // errorLog += `But if you'd prefer not to, you can click the "Next" button below.\n`;
           alert(errorLog);
-          experiment.validateQuestionnaireAlerted = true;
+          $("#questionnaireNextButton").click(function(){$(this).blur(); 
+            $("#questionnaireForm").submit(experiment.validateQuestionnaire());
+          })
+          // experiment.validateQuestionnaireAlerted = true;
         } else {
         experiment.captureQuestionnaire();
         }

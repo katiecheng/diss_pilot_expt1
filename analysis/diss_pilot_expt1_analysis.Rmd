@@ -51,7 +51,8 @@ v2FactCols <- c("effectivenessRestudy",
                 "directionOfChange", 
                 "changeRelativeToOutcome")
 
-v2NumCols <- c("effectivenessRestudy_num", 
+v2NumCols <- c("age",
+               "effectivenessRestudy_num", 
                "effectivenessGenerate_num", 
                "diff_assessmentBeliefRG_num", 
                "effectivenessChosenStrategy_num", 
@@ -121,6 +122,15 @@ df_v3n36_users$effort_num <- effortRating[as.character(df_v3n36_users$effort)]
 # which exceeded expectations more?
 df_v2n48_v3n36_users$diff_interventionStrategyScoreExceedPrediction <- df_v2n48_v3n36_users$diff_interventionRestudyScoreToPrediction - 
   df_v2n48_v3n36_users$diff_interventionGenerateScoreToPrediction
+
+df_v3n36_users$diff_interventionStrategyScoreExceedPrediction <- df_v3n36_users$diff_interventionRestudyScoreToPrediction - 
+  df_v3n36_users$diff_interventionGenerateScoreToPrediction
+
+# scale predictions to be on the same scale as effectiveness ratings
+
+scaling_constant <- 10/1.69
+
+df_v3n36_users$changeBeliefRG_num <- df_v3n36_users$diff_assessmentBeliefRG_num - (df_v3n36_users$diff_interventionPredictRG / scaling_constant)
 
 ```
 
@@ -1311,6 +1321,121 @@ summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionStrategyScoreExceedPre
 filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
 
 filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+```
+
+```{r belief change as diff of z scores}
+
+#df_v3n36_users$changeBeliefRG_num * df_v3n36_users$consis
+
+
+summary(lm(changeBeliefRG_num ~ abs(diff_interventionTestOutcomeRG), df_v3n36_users)) # 0.05406
+summary(lm(changeBeliefRG_num ~ diff_interventionTestOutcomeRG, df_v3n36_users)) # 0.149
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+
+summary(lm(changeBeliefRG_num ~ diff_interventionRestudyScoreToPrediction, df_v3n36_users)) # 0.005038
+summary(lm(changeBeliefRG_num ~ diff_interventionGenerateScoreToPrediction, df_v3n36_users)) # .4054
+summary(lm(changeBeliefRG_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v3n36_users)) # 0.0005788
+
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+#which exceeded expectations more?
+
+summary(lm(changeBeliefRG_num ~ diff_interventionStrategyScoreExceedPrediction, df_v3n36_users)) # 9.812e-05
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, changeBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+
+```
+# Testing effectiveness hypothesis
+```{r mean effectiveness by preferred strategy (restudy, generate, choice)}
+
+df_v3n36_users$effectivenessRestudy_num
+df_v3n36_users$effectivenessGenerate_num
+df_v3n36_users$effectivenessChosenStrategy_num
+
+# lm(effectiveness ~ predicted by chosen, generate, or restudy)
+# difference in means
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(measures, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "measures", y = "mean effectiveness")
+
+# split on preference for generate/restudy
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("assessmentBelief", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(assessmentBelief, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentBelief", y = "mean effectiveness")
+
+```
+
+```{r mean effectiveness by strategy feedback (restudy, generate, choice)}
+
+df_v3n36_users$effectivenessRestudy_num
+df_v3n36_users$effectivenessGenerate_num
+df_v3n36_users$effectivenessChosenStrategy_num
+
+# lm(effectiveness ~ predicted by chosen, generate, or restudy)
+# difference in means
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(measures, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "measures", y = "mean effectiveness")
+
+# split on preference for generate/restudy
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("assessmentBelief", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(assessmentBelief, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentBelief", y = "mean effectiveness")
+
+```
+```{r verbal descriptions by strategy}
+
+# mostly repeat, some word association, 2/8 recall (25%)
+filter(df_v3n36_users, assessmentBelief=="restudy")$chosenStrategy
+
+# word association, repeat, 4/14 recall (28%)
+filter(df_v3n36_users, assessmentBelief=="generate")$chosenStrategy
+
+# repeat, some word association, 1/12 recall (16%)
+filter(df_v3n36_users, assessmentBelief=="equal")$chosenStrategy
+
+# Descriptions are not really showing that people who "believe" generate are doing more generate
 
 ```
 

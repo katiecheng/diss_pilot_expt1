@@ -319,6 +319,7 @@ df_users = df_users[[
   "interventionPredictGenerate",
   "interventionPredictGenerateReason",
   "interventionPrediction",
+  "diff_interventionPredictRG",
   "interventionTestRestudyScore",
   "interventionTestRestudyScoreLevDist1",
   "interventionTestRestudyScoreLevDist2",
