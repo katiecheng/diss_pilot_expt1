@@ -145,12 +145,18 @@ function createNewUser(prolificId, startDateTime, condition) {
 
     interventionTestRestudyScore: "",
     interventionTestGenerateScore: "",
+    interventionFeedbackSurprise: "",
     assessmentTestScore: "",
 
     effectivenessRestudy : "",
+    effortRestudy : "",
+    howManyRestudy : "",
     effectivenessGenerate : "",
+    effortGenerate : "",
+    howManyGenerate : "",  
     chosenStrategy : "",
     effectivenessChosenStrategy : "",
+    effortChosenStrategy : "",
     effort : "",
 
     comments : ""
@@ -160,10 +166,10 @@ function createNewUser(prolificId, startDateTime, condition) {
 function updateUserPredictions(prolificId, predictRestudy, predictRestudyReason,
   predictGenerate, predictGenerateReason){
   db.ref('users/' + prolificId).update({
-    interventionPredictRestudy : predictRestudy || "",
-    interventionPredictRestudyReason : predictRestudyReason || "",
-    interventionPredictGenerate : predictGenerate || "",
-    interventionPredictGenerateReason : predictGenerateReason || ""
+    interventionPredictRestudy : predictRestudy,
+    interventionPredictRestudyReason : predictRestudyReason,
+    interventionPredictGenerate : predictGenerate,
+    interventionPredictGenerateReason : predictGenerateReason
   });
 }
 
@@ -188,20 +194,32 @@ function updateUserInterventionTestScores(prolificId, restudyScore, generateScor
   });
 }
 
+function updateUserFeedbackSurprise(prolificId, feedbackSurprise){
+  db.ref('users/' + prolificId).update({
+    interventionFeedbackSurprise: feedbackSurprise
+  });
+}
+
 function updateUserAssessmentTestScore(prolificId, assessmentScore) {
   db.ref('users/' + prolificId).update({
     assessmentTestScore : assessmentScore
   });
 }
 
-function updateUserQuestionnaire(prolificId, effectivenessRestudy, effectivenessGenerate,
-      chosenStrategy, effectivenessChosenStrategy, effort){
+function updateUserQuestionnaire(prolificId, effectivenessRestudy, effortRestudy, howManyRestudy, 
+        effectivenessGenerate, effortGenerate, howManyGenerate,
+        chosenStrategy, effectivenessChosenStrategy, effortChosenStrategy, effort){
   db.ref('users/' + prolificId).update({
-    effectivenessRestudy : effectivenessRestudy || "",
-    effectivenessGenerate : effectivenessGenerate || "",
-    chosenStrategy : chosenStrategy || "",
-    effectivenessChosenStrategy : effectivenessChosenStrategy || "",
-    effort : effort || ""
+    effectivenessRestudy : effectivenessRestudy,
+    effortRestudy : effortRestudy,
+    howManyRestudy : howManyRestudy,
+    effectivenessGenerate : effectivenessGenerate,
+    effortGenerate : effortGenerate,
+    howManyGenerate : howManyGenerate,  
+    chosenStrategy : chosenStrategy,
+    effectivenessChosenStrategy : effectivenessChosenStrategy,
+    effortChosenStrategy : effortChosenStrategy,
+    effort : effort
   });
 }
 
@@ -358,8 +376,16 @@ function getCondition(){
     runExpt();
     // Show the instructions slide -- this is what we want subjects to see first.
     // showSlide("getProlificId");
-    experiment.questionnaire(); 
-    showSlide("questionnaire");
+
+    // experiment.interventionPredict(); 
+    // showSlide("predictNext");
+
+    // experiment.controlFeedback(); 
+    experiment.interventionFeedback(); 
+    showSlide("feedbackNext");
+
+    // experiment.questionnaire(); 
+    // showSlide("questionnaire");
   });
 }
 
@@ -507,15 +533,17 @@ function runExpt(){
     interventionTestOrderCounter: 0,
     interventionTestRestudyScore: 0,
     interventionTestGenerateScore: 0,
+    interventionFeedbackSurprise: "",
     assessmentStudyOrderCounter: 0,
     assessmentStrategyOrderCounter: 0,
     assessmentTestOrderCounter: 0,
     assessmentTestScore: 0,
     totalScore: 0,
-    bonusPayment: 0,
+    // bonusPayment: 0,
 
     /* alert tracking */
     validatePredictionFormAlerted: false,
+    validateFeedbackSurpriseAlerted: false,
     validateQuestionnaireAlerted: false,
 
     // Instructions
@@ -909,7 +937,7 @@ function runExpt(){
       $("#feedbackText").html(text);
       $("#firstFeedbackText").html("");
       $("#secondFeedbackText").html("");
-      $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentFraming()});
+      $("#feedbackNextButton").click(function(){$(this).blur(); experiment.interventionFeedbackSurprise()});
     },
     /*
     No strategy feedback: summative performance outcome
@@ -960,7 +988,40 @@ function runExpt(){
       $("#feedbackText").html(text);
       $("#firstFeedbackText").html(firstFeedbackText);
       $("#secondFeedbackText").html(secondFeedbackText);
-      $("#feedbackNextButton").click(function(){$(this).blur(); experiment.assessmentFraming()});
+      $("#feedbackNextButton").click(function(){$(this).blur(); experiment.interventionFeedbackSurprise()});
+    },
+
+    interventionFeedbackSurprise: function() {
+      showSlide("feedbackSurpriseNext");
+      $("#feedbackSurpriseNextButton").click(function(){$(this).blur(); experiment.validateFeedbackSurprise()});
+    },
+
+    validateFeedbackSurprise: function() {
+      var fail = false,
+        errorLog = "";
+      var feedbackSurprise = $("#feedbackSurprise").val();
+       
+      if (!$.trim($("#feedbackSurprise").val())) {
+        errorLog += `We noticed that you did not provide a response. Please share your thoughts.`;
+        fail = true;
+      } 
+      if (fail) {
+        if (!experiment.validateFeedbackSurpriseAlerted){
+          alert(errorLog);
+          // experiment.validateFeedbackSurpriseAlerted = true; // toggle to allow empty
+        } else { 
+          experiment.captureFeedbackSurprise(feedbackSurprise);
+        }
+      } else { 
+        experiment.captureFeedbackSurprise(feedbackSurprise);
+      }
+    },
+
+    captureFeedbackSurprise: function(feedbackSurprise) {
+      experiment.interventionFeedbackSurprise = feedbackSurprise;
+      updateUserFeedbackSurprise(experiment.prolificId, feedbackSurprise);
+      experiment.assessmentFraming();
+      return false;
     },
 
     assessmentFraming: function() {
@@ -1315,7 +1376,7 @@ function runExpt(){
     validateQuestionnaire: function(){
       var fail = false,
         errorLog = "We noticed that you did not provide a valid response to some of our questions. Please check your response to the following questions:\n",
-        names = ['Q1a', 'Q1b', 'Q2a', 'Q2b', 'Q3a', 'Q3b', 'Q3c', 'Q4a', 'Q4b', 'Q5', 'Q6']
+        names = ['Q1a', 'Q1b', 'Q2a', 'Q2b', 'Q3a', 'Q3b', 'Q3c', 'Q4a', 'Q4b', 'Q5']
       for (name of names){
         if (name == 'Q3a'){ 
           // strategy textarea, trim whitespace
@@ -1325,16 +1386,15 @@ function runExpt(){
           }
         } else if (name == 'Q4a') {
           var Q4a = parseInt($("#Q4a").val())
-          console.log(Q4a)
           if (!(Q4a >= 0 & Q4a <= experiment.numTrials/2)){
             errorLog += name + " ";
             fail = true;
           }
-        } else if (name == 'Q5'){ 
-          // strategy textarea, trim whitespace
-          if (!$.trim($("#Q5").val())){
-            fail = true;
+        } else if (name == 'Q4b') {
+          var Q4b = parseInt($("#Q4b").val())
+          if (!(Q4b >= 0 & Q4b <= experiment.numTrials/2)){
             errorLog += name + " ";
+            fail = true;
           }
         } else if (! $("input:radio[name=inputName]".replace("inputName", name)).is(":checked")) {
           // radio buttons
@@ -1346,9 +1406,6 @@ function runExpt(){
         if (!experiment.validateQuestionnaireAlerted){
           // errorLog += `But if you'd prefer not to, you can click the "Next" button below.\n`;
           alert(errorLog);
-          $("#questionnaireNextButton").click(function(){$(this).blur(); 
-            $("#questionnaireForm").submit(experiment.validateQuestionnaire());
-          })
           // experiment.validateQuestionnaireAlerted = true; // toggle to allow empty
         } else {
         experiment.captureQuestionnaire();
@@ -1360,19 +1417,30 @@ function runExpt(){
 
     captureQuestionnaire: function(){
       if (experiment.predictRestudyFirst){
-        var effectivenessRestudy = $("input:radio[name=Q1]:checked").val(),
-          effectivenessGenerate = $("input:radio[name=Q2]:checked").val();
+        var effectivenessRestudy = $("input:radio[name=Q1a]:checked").val(),
+          effortRestudy = $("input:radio[name=Q1b]:checked").val(),
+          howManyRestudy = parseInt($("#Q4a").val()),
+          effectivenessGenerate = $("input:radio[name=Q2a]:checked").val(),
+          effortGenerate = $("input:radio[name=Q2b]:checked").val(),
+          howManyGenerate = parseInt($("#Q4b").val());
       } else {
-        var effectivenessRestudy = $("input:radio[name=Q2]:checked").val(),
-          effectivenessGenerate = $("input:radio[name=Q1]:checked").val();
+        var effectivenessRestudy = $("input:radio[name=Q2a]:checked").val(),
+          effortRestudy = $("input:radio[name=Q2b]:checked").val(),
+          howManyRestudy = parseInt($("#Q4b").val()),
+          effectivenessGenerate = $("input:radio[name=Q1a]:checked").val(),
+          effortGenerate = $("input:radio[name=Q1b]:checked").val(),
+          howManyGenerate = parseInt($("#Q4a").val());
       }
-      var chosenStrategy = $("#Q3").val(),
-        effectivenessChosenStrategy = $("input:radio[name=Q4]:checked").val(),
+      var chosenStrategy = $("#Q3a").val(),
+        effectivenessChosenStrategy = $("input:radio[name=Q3b]:checked").val(),
+        effortChosenStrategy = $("input:radio[name=Q3c]:checked").val(),
         effort = $("input:radio[name=Q5]:checked").val();
-      console.log(experiment.prolificId, effectivenessRestudy, effectivenessGenerate,
-        chosenStrategy, effectivenessChosenStrategy, effort);
-      updateUserQuestionnaire(experiment.prolificId, effectivenessRestudy, effectivenessGenerate,
-        chosenStrategy, effectivenessChosenStrategy, effort);
+      console.log(experiment.prolificId, effectivenessRestudy, effortRestudy, howManyRestudy, 
+        effectivenessGenerate, effortGenerate, howManyGenerate,
+        chosenStrategy, effectivenessChosenStrategy, effortChosenStrategy, effort);
+      updateUserQuestionnaire(experiment.prolificId, effectivenessRestudy, effortRestudy, howManyRestudy, 
+        effectivenessGenerate, effortGenerate, howManyGenerate,
+        chosenStrategy, effectivenessChosenStrategy, effortChosenStrategy, effort);
       experiment.end()
     },
 
@@ -1381,11 +1449,13 @@ function runExpt(){
       var endDateTime = new Date();
       updateUserEndDateTime(experiment.prolificId, endDateTime);
       experiment.totalScore = interventionTestRestudyScore + interventionTestGenerateScore + assessmentTestScore;
+      /*
       experiment.bonusPayment = totalScore * .05;
       var bonusPaymentText = `Across the two quizzes, you typed ${experiment.totalScore} correct English
         translations, which means you earned $ ${experiment.bonusPayment} in bonus payments.`
+      */
       showSlide("end");
-      $("#bonusPaymentText").html( );
+      // $("#bonusPaymentText").html( );
       $("#redirectButton").click(function(){$(this).blur(); experiment.redirect();});
     },
 
