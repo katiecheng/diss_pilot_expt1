@@ -132,6 +132,19 @@ scaling_constant <- 10/1.69
 
 df_v3n36_users$changeBeliefRG_num <- df_v3n36_users$diff_assessmentBeliefRG_num - (df_v3n36_users$diff_interventionPredictRG / scaling_constant)
 
+
+# approximate behavioral buckets
+
+df_v2n48_v3n36$assessmentStrategyGenerated <- ifelse(df_v2n48_v3n36$assessmentStrategyRevealLatency > 2000, "generated", "skipped")
+
+df_v2n48_v3n36$assessmentStrategyRestudied <- ifelse(df_v2n48_v3n36$assessmentStrategyMoveOnLatency > 2000, "restudied", "skipped")
+
+df_v2n48_v3n36$assessmentStrategyGenerated_num <- ifelse(df_v2n48_v3n36$assessmentStrategyRevealLatency > 2000, 1, 0)
+
+df_v2n48_v3n36$assessmentStrategyRestudied_num <- ifelse(df_v2n48_v3n36$assessmentStrategyMoveOnLatency > 2000, 1, 0)
+
+df_v2n48_v3n36$assessmentStrategyNoneGenResBoth <- factor(with(df_v2n48_v3n36, interaction(assessmentStrategyGenerated, assessmentStrategyRestudied)))
+
 ```
 
 
@@ -1231,58 +1244,97 @@ means <- summarySE(melt, measurevar="mean", groupvars=c("condition","interventio
 
 ```{r abstract outcomes toward/away}
 
-summary(lm(changeRelativeToOutcome_num ~ diff_interventionTestOutcomeRG, df_v2n48_v3n36_users)) # 0.0007441
-summary(lm(changeRelativeToOutcome_num ~ abs(diff_interventionTestOutcomeRG), df_v2n48_v3n36_users)) # 0.1011
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionTestOutcomeRG, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.0007441
+summary(lm(changeRelativeToOutcome_num ~ abs(diff_interventionTestOutcomeRG), filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.1011
 
-summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction, df_v2n48_v3n36_users)) # 0.4
-summary(lm(changeRelativeToOutcome_num ~ diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # 0.6262
-summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # 0.625
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.4
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.6262
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.625
 
-filter(df_v2n48_v3n36_users, !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num)) + geom_point() + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num)) + geom_point() + geom_smooth(method=loess)
 
 #which exceeded expectations more?
 
-summary(lm(changeRelativeToOutcome_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.3352
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionStrategyScoreExceedPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.3352
+```
+
+```{r CHANGE FILTERED 0 1 again in format consistent with other outcome measures}
+
+summary(lm(changeRelativeToOutcome_num ~ abs(diff_interventionTestOutcomeRG), filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.1315
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionTestOutcomeRG, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.0003017
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.09246 TREND
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # n.s.
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.02332 SIG
+
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+#which exceeded expectations more?
+
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionStrategyScoreExceedPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.00615
+
+summary(lm(changeRelativeToOutcome_num ~ abs(diff_interventionStrategyScoreExceedPrediction), filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.005985
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(changeRelativeToOutcome_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, changeRelativeToOutcome_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+
+# when both are in the model...but this prob doesn't make sense since correlated
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionTestOutcomeRG + diff_interventionStrategyScoreExceedPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.0008947
+
 ```
 
 There's nearly a trend. The greater the discrepancy between reread and generate, the more likely they are to make a change that is consistent with the direction of the feedback. 
 
-```{r abstract outcomes -2, -1, 0, 1, 2}
+```{r abstract outcomes -2 -1 0 1 2}
 
-summary(lm(directionOfChange_num ~ abs(diff_interventionTestOutcomeRG), df_v2n48_v3n36_users)) # 0.1315
-summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG, df_v2n48_v3n36_users)) # 0.0003017
+summary(lm(directionOfChange_num ~ abs(diff_interventionTestOutcomeRG), filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.1315
+summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.0003017
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
-
-
-summary(lm(directionOfChange_num ~ diff_interventionRestudyScoreToPrediction, df_v2n48_v3n36_users)) # 0.09246 TREND
-summary(lm(directionOfChange_num ~ diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # n.s.
-summary(lm(directionOfChange_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # 0.02332 SIG
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
 
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+summary(lm(directionOfChange_num ~ diff_interventionRestudyScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.09246 TREND
+summary(lm(directionOfChange_num ~ diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # n.s.
+summary(lm(directionOfChange_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.02332 SIG
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
 
 #which exceeded expectations more?
 
-summary(lm(directionOfChange_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.00615
+summary(lm(directionOfChange_num ~ diff_interventionStrategyScoreExceedPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.00615
 
-summary(lm(directionOfChange_num ~ abs(diff_interventionStrategyScoreExceedPrediction), df_v2n48_v3n36_users)) # 0.005985
+summary(lm(directionOfChange_num ~ abs(diff_interventionStrategyScoreExceedPrediction), filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.005985
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=loess)
 
-filter(df_v2n48_v3n36_users, !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(directionOfChange_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, directionOfChange_num)) + geom_jitter(width=.15, height=.15) + geom_smooth(method=lm)
 
 
 # when both are in the model...but this prob doesn't make sense since correlated
-summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG + diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.0008947
+summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG + diff_interventionStrategyScoreExceedPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.0008947
 
 ```
 Those who get generate are moving toward generate. Those who get restudy are moving toward equal/generate. 
@@ -1293,34 +1345,34 @@ The more the Generate outcome exceeds the prediction, the more change toward fee
 
 ```{r going back to simpler outcomes}
 
-summary(lm(diff_assessmentBeliefRG_num ~ abs(diff_interventionTestOutcomeRG), df_v2n48_v3n36_users)) # 0.1194
-summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionTestOutcomeRG, df_v2n48_v3n36_users)) # 0.008415
+summary(lm(diff_assessmentBeliefRG_num ~ abs(diff_interventionTestOutcomeRG), filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.1194
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionTestOutcomeRG, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.008415
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
-
-
-summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionRestudyScoreToPrediction, df_v2n48_v3n36_users)) # ns
-summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # ns
-summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v2n48_v3n36_users)) # ns
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
 
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionRestudyScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # ns
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # ns
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # ns
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
 
 #which exceeded expectations more?
 
-summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users)) # 0.4244
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionStrategyScoreExceedPrediction, filter(df_v2n48_v3n36_users, condition=="expt"))) # 0.4244
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
 
-filter(df_v2n48_v3n36_users, !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+filter(filter(df_v2n48_v3n36_users, condition=="expt"), !is.na(diff_assessmentBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, diff_assessmentBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
 
 ```
 
@@ -1360,6 +1412,206 @@ filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_intervent
 
 
 ```
+# Testing effectiveness hypothesis
+```{r mean effectiveness by preferred strategy (restudy, generate, choice)}
+
+df_v3n36_users$effectivenessRestudy_num
+df_v3n36_users$effectivenessGenerate_num
+df_v3n36_users$effectivenessChosenStrategy_num
+
+# lm(effectiveness ~ predicted by chosen, generate, or restudy)
+# difference in means
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(measures, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "measures", y = "mean effectiveness")
+
+# split on preference for generate/restudy
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("assessmentBelief", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(assessmentBelief, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentBelief", y = "mean effectiveness")
+
+```
+
+```{r mean effectiveness by strategy feedback (restudy, generate, choice)}
+
+df_v3n36_users$effectivenessRestudy_num
+df_v3n36_users$effectivenessGenerate_num
+df_v3n36_users$effectivenessChosenStrategy_num
+
+# lm(effectiveness ~ predicted by chosen, generate, or restudy)
+# difference in means
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(measures, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "measures", y = "mean effectiveness")
+
+# split on preference for generate/restudy
+
+
+melt <- tidyr::gather(df_v3n36_users, key="measures", value="mean", effectivenessRestudy_num, effectivenessGenerate_num, effectivenessChosenStrategy_num, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("assessmentBelief", "measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(assessmentBelief, mean, color=measures, fill=measures)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "assessmentBelief", y = "mean effectiveness")
+
+```
+```{r verbal descriptions by strategy}
+
+# mostly repeat, some word association, 2/8 recall (25%)
+filter(df_v3n36_users, assessmentBelief=="restudy")$chosenStrategy
+
+# word association, repeat, 4/14 recall (28%)
+filter(df_v3n36_users, assessmentBelief=="generate")$chosenStrategy
+
+# repeat, some word association, 1/12 recall (16%)
+filter(df_v3n36_users, assessmentBelief=="equal")$chosenStrategy
+
+# Descriptions are not really showing that people who "believe" generate are doing more generate
+
+```
+
+## Model comparison
+
+```{r}
+
+m0 <- lm(diff_assessmentBeliefRG_num ~ diff_interventionStrategyScoreExceedPrediction, df_v2n48_v3n36_users); summary(m0)
+
+```
+
+
+## Power analysis
+```{r}
+
+# beliefs
+# behavior
+# learning
+
+# intervention vs. control
+
+# means and errorbars, Latency means
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+# reveal requires sample n=630-772
+# moveOn requires sample n=16920-21396
+# testScore requires sample n=5342-6122
+
+# G, R, E vs. control
+
+# means and errorbars, Latency means
+melt <- tidyr::gather(df_v2n48_v3n36_users, key="measures", value="mean", avgAssessmentStrategyRevealLatency, avgAssessmentStrategyMoveOnLatency, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("feedback", "measures"), na.rm=TRUE, conf.interval=0.95); means
+
+# subset to G vs. control
+# reveal requires sample n=4974-6296 /2/.6+183 = 4328-5429
+# moveOn requires sample n=576-860 /2/.6+183 = 663-899
+# testScore requires sample n=366-382 /2/.6+183 = 488-501
+
+
+```
+
+# Behavior analysis
+```{r approximate behavioral buckets by >2 CLEAN UP IN PYTHON}
+
+# approximate behavioral buckets
+# df_v2n48_v3n36$assessmentStrategyGenerated
+# df_v2n48_v3n36$assessmentStrategyRestudied
+# df_v2n48_v3n36$assessmentStrategyGenerated_num
+# df_v2n48_v3n36$assessmentStrategyRestudied_num
+# df_v2n48_v3n36$assessmentStrategyNoneGenResBoth
+
+# messy analysis, "mean" which is % of time they used this strategy
+melt <- tidyr::gather(df_v2n48_v3n36, key="measures", value="mean", assessmentStrategyGenerated, assessmentStrategyRestudied, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("prolificId", "condition", "measures"), na.rm=TRUE, conf.interval=0.95); means
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "measures"), na.rm=TRUE, conf.interval=0.95); means
+# expt generated more, and restudied more
+
+# table of strategy types
+# divide by different n's: control n=420, expt n=1220
+t <- table(assessmentStrategyNoneGenResBoth=df_v2n48_v3n36$assessmentStrategyNoneGenResBoth, condition=df_v2n48_v3n36$condition); t; addmargins(t)
+scaledt <- sweep(t,2,colSums(t),`/`); scaledt
+# expt generated more, and restudied more
+# fewer expt did both
+# fewer expt did neither
+
+chisq.test(t) # p = 0.0001098
+chisq.test(t(t)) # p = 0.0001098; doesn't matter if it's transposed
+# sig, means distribution is different?
+# reject the null hypothesis that latency profile is independent of condition
+
+chisq.test(scaledt) # p = 0.9983
+chisq.test(t(scaledt)) # p = 0.9983; doesn't matter if it's transposed
+# n.s., means distribution is same?
+# no, I think unequal sample size shouldn't matter; we're just looking at probability distributions...but then, why are the results changing?
+
+# No this is wrong! looking at condition differences at item level, ignoring participant level. Need to aggregate into participants, before comparing condition differences.
+
+ggplot(data.frame(scaledt)) +
+  geom_bar(aes(x=assessmentStrategyNoneGenResBoth, y=Freq, fill=condition),
+           stat="identity",
+           position="dodge") +
+  theme_bw()
+
+```
+
+```{r belief change as diff of z scores}
+
+#df_v3n36_users$changeBeliefRG_num * df_v3n36_users$consis
+
+
+summary(lm(changeBeliefRG_num ~ abs(diff_interventionTestOutcomeRG), df_v3n36_users)) # 0.05406
+summary(lm(changeBeliefRG_num ~ diff_interventionTestOutcomeRG, df_v3n36_users)) # 0.149
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+
+summary(lm(changeBeliefRG_num ~ diff_interventionRestudyScoreToPrediction, df_v3n36_users)) # 0.005038
+summary(lm(changeBeliefRG_num ~ diff_interventionGenerateScoreToPrediction, df_v3n36_users)) # .4054
+summary(lm(changeBeliefRG_num ~ diff_interventionRestudyScoreToPrediction + diff_interventionGenerateScoreToPrediction, df_v3n36_users)) # 0.0005788
+
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionRestudyScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionGenerateScoreToPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+#which exceeded expectations more?
+
+summary(lm(changeBeliefRG_num ~ diff_interventionStrategyScoreExceedPrediction, df_v3n36_users)) # 9.812e-05
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, changeBeliefRG_num)) + geom_point() + geom_smooth(method=loess)
+
+filter(df_v3n36_users, !is.na(changeBeliefRG_num)) %>% ggplot(aes(diff_interventionStrategyScoreExceedPrediction, changeBeliefRG_num)) + geom_jitter() + geom_smooth(method=lm)
+
+
+```
+
 # Testing effectiveness hypothesis
 ```{r mean effectiveness by preferred strategy (restudy, generate, choice)}
 

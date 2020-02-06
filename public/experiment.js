@@ -407,7 +407,7 @@ var experiment = "",
     ["embe", "mango"],
     ["fagio", "broom"],
     ["farasi", "horse"],
-    ["fununu", "rumour"],
+    ["fununu", "rumor"],
     ["godoro", "mattress"],
     ["goti", "knee"],
     ["hariri", "silk"],
@@ -511,6 +511,8 @@ function runExpt(){
     assessmentStrategyOrderCounter: 0,
     assessmentTestOrderCounter: 0,
     assessmentTestScore: 0,
+    totalScore: 0,
+    bonusPayment: 0,
 
     /* alert tracking */
     validatePredictionFormAlerted: false,
@@ -778,7 +780,6 @@ function runExpt(){
             secondPrediction >= 0 & secondPrediction <= experiment.numTrials/4)){
         errorLog += `We noticed that one or more of your predictions is not a number in the range from 0 to ${experiment.numTrials/4}. Please give us your best prediction in this range.\n\n`;
         fail = true;
-        // return false; 
       } 
       if (!$.trim($("#firstPredictionReason").val()) |
                  !$.trim($("#secondPredictionReason").val())) {
@@ -788,7 +789,7 @@ function runExpt(){
       if (fail) {
         if (!experiment.validatePredictionFormAlerted){
           alert(errorLog);
-          experiment.validatePredictionFormAlerted = true;
+          // experiment.validatePredictionFormAlerted = true; // toggle to allow empty
         } else { 
           experiment.capturePrediction(firstPrediction, firstPredictionReason,
             secondPrediction, secondPredictionReason);
@@ -1270,7 +1271,6 @@ function runExpt(){
       (i.e. attempting to recall the English translation) part of your chosen study strategy?`;
 
 
-
       if (experiment.predictRestudyFirst){
         // predict restudy first, then predict generate
         // var firstQuestionText = restudyQuestionText;
@@ -1314,7 +1314,7 @@ function runExpt(){
 
     validateQuestionnaire: function(){
       var fail = false,
-        errorLog = "We noticed that you did not provide a valid response to some of our questions. Please provide a valid response to\n",
+        errorLog = "We noticed that you did not provide a valid response to some of our questions. Please check your response to the following questions:\n",
         names = ['Q1a', 'Q1b', 'Q2a', 'Q2b', 'Q3a', 'Q3b', 'Q3c', 'Q4a', 'Q4b', 'Q5', 'Q6']
       for (name of names){
         if (name == 'Q3a'){ 
@@ -1349,7 +1349,7 @@ function runExpt(){
           $("#questionnaireNextButton").click(function(){$(this).blur(); 
             $("#questionnaireForm").submit(experiment.validateQuestionnaire());
           })
-          // experiment.validateQuestionnaireAlerted = true;
+          // experiment.validateQuestionnaireAlerted = true; // toggle to allow empty
         } else {
         experiment.captureQuestionnaire();
         }
@@ -1380,7 +1380,12 @@ function runExpt(){
     end: function() {
       var endDateTime = new Date();
       updateUserEndDateTime(experiment.prolificId, endDateTime);
+      experiment.totalScore = interventionTestRestudyScore + interventionTestGenerateScore + assessmentTestScore;
+      experiment.bonusPayment = totalScore * .05;
+      var bonusPaymentText = `Across the two quizzes, you typed ${experiment.totalScore} correct English
+        translations, which means you earned $ ${experiment.bonusPayment} in bonus payments.`
       showSlide("end");
+      $("#bonusPaymentText").html( );
       $("#redirectButton").click(function(){$(this).blur(); experiment.redirect();});
     },
 
