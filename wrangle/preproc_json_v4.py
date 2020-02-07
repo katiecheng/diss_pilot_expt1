@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import Levenshtein as lev
 
-### For version deployed 2020-02-06, with new questionnaire
+### For v4 version deployed 2020-02-06, with n=48 and new questionnaire
 
 ### Get user input for which files to process
 if(len(sys.argv) - 1 == 2):
