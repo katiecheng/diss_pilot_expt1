@@ -348,6 +348,7 @@ df_users = df_users[[
   "diff_interventionTestOutcomeRG",
   "diff_interventionRestudyScoreToPrediction",
   "diff_interventionGenerateScoreToPrediction",
+  "interventionFeedbackSurprise",
   "avgAssessmentStrategyRevealLatency",
   "sdAssessmentStrategyRevealLatency",
   "avgAssessmentStrategyMoveOnLatency",
