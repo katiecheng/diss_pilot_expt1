@@ -375,15 +375,18 @@ function getCondition(){
     });
     runExpt();
     // Show the instructions slide -- this is what we want subjects to see first.
-    // showSlide("getProlificId");
+    showSlide("getProlificId");
 
+    // test prediction slide
     // experiment.interventionPredict(); 
     // showSlide("predictNext");
 
+    // test feedback slides
     // experiment.controlFeedback(); 
-    experiment.interventionFeedback(); 
-    showSlide("feedbackNext");
+    // experiment.interventionFeedback(); 
+    // showSlide("feedbackNext");
 
+    // test questionnaire slides
     // experiment.questionnaire(); 
     // showSlide("questionnaire");
   });
@@ -395,9 +398,10 @@ function processUserInput(userInput){
 
 // ## Configuration settings
 var experiment = "",
+  /* toggle numTrials for testing*/
   numTrials = 40, // full 40 items
   /* test intervention with first numTrials items, in case need to re-test people */
-  // numTrials = 20, // testing
+  // numTrials = 10, // testing
   trialDuration = 5000,
   feedbackDuration = 1000, 
   bgcolor = "white",
@@ -487,8 +491,8 @@ function runExpt(){
     numTrials: numTrials,
     numStrategyRounds: numStrategyRounds,
     /* Toggle for random or manual condition */
-    // condition: condition,
-    condition: 1,
+    condition: condition,
+    // condition: 1, // manual
     myTrialOrder: myTrialOrder, // already shuffled
     trialDuration: trialDuration,
     feedbackDuration: feedbackDuration,
@@ -538,7 +542,7 @@ function runExpt(){
     assessmentStrategyOrderCounter: 0,
     assessmentTestOrderCounter: 0,
     assessmentTestScore: 0,
-    totalScore: 0,
+    // totalScore: 0,
     // bonusPayment: 0,
 
     /* alert tracking */
@@ -1326,9 +1330,9 @@ function runExpt(){
         //TODO DECIDE: `You could study using whatever strategy you chose`
       var howManyText = `In the second round of learning, you could study the ${experiment.numTrials/2} Swahili-English 
       word pairs using any strategy you chose.`
-      var restudyHowManyText = `For these 20 Swahili-English word pairs, how many times was <b>review</b> 
+      var restudyHowManyText = `For these ${experiment.numTrials/2} Swahili-English word pairs, how many times was <b>review</b> 
       (i.e. attempting to review the English translation) part of your chosen study strategy?`;
-      var generateHowManyText = `For these 20 Swahili-English word pairs, how many times was <b>recall</b> 
+      var generateHowManyText = `For these ${experiment.numTrials/2} Swahili-English word pairs, how many times was <b>recall</b> 
       (i.e. attempting to recall the English translation) part of your chosen study strategy?`;
 
 
@@ -1368,6 +1372,7 @@ function runExpt(){
       $("#secondEffortText").html(secondEffortText);
       $("#secondHowManyText").html(secondHowManyText);
       $("#howManyText").html(howManyText);
+      $(".howManyDenominator").html(`/${experiment.numTrials/2}`);
       $("#questionnaireNextButton").click(function(){$(this).blur(); 
         $("#questionnaireForm").submit(experiment.validateQuestionnaire());
       })
@@ -1435,9 +1440,6 @@ function runExpt(){
         effectivenessChosenStrategy = $("input:radio[name=Q3b]:checked").val(),
         effortChosenStrategy = $("input:radio[name=Q3c]:checked").val(),
         effort = $("input:radio[name=Q5]:checked").val();
-      console.log(experiment.prolificId, effectivenessRestudy, effortRestudy, howManyRestudy, 
-        effectivenessGenerate, effortGenerate, howManyGenerate,
-        chosenStrategy, effectivenessChosenStrategy, effortChosenStrategy, effort);
       updateUserQuestionnaire(experiment.prolificId, effectivenessRestudy, effortRestudy, howManyRestudy, 
         effectivenessGenerate, effortGenerate, howManyGenerate,
         chosenStrategy, effectivenessChosenStrategy, effortChosenStrategy, effort);
@@ -1448,8 +1450,8 @@ function runExpt(){
     end: function() {
       var endDateTime = new Date();
       updateUserEndDateTime(experiment.prolificId, endDateTime);
-      experiment.totalScore = interventionTestRestudyScore + interventionTestGenerateScore + assessmentTestScore;
       /*
+      experiment.totalScore = interventionTestRestudyScore + interventionTestGenerateScore + assessmentTestScore;
       experiment.bonusPayment = totalScore * .05;
       var bonusPaymentText = `Across the two quizzes, you typed ${experiment.totalScore} correct English
         translations, which means you earned $ ${experiment.bonusPayment} in bonus payments.`
