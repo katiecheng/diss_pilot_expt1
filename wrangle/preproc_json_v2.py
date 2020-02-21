@@ -34,6 +34,12 @@ items_dict = data['items']
 df_users = pd.DataFrame.from_dict(users_dict, orient='index')
 df_items = pd.DataFrame.from_dict(items_dict, orient='index')
 
+
+### Read belief change variables
+df_belief_change_vars = pd.read_csv(
+  'variable_calcs_toImport.csv'
+)
+
 ### WRANGLE #######################################################################################
 ### Drop items with NaN in itemIndex
 df_items = df_items.dropna(subset=['itemIndex'])
@@ -240,6 +246,11 @@ df_users['assessmentBelief'] = df_users.apply(
 
 ### Calculate shift in beliefs
 
+# use manually calculated beliefs
+# reset_index() and set_index() lets you keep the index after merge
+df_users = df_users.reset_index().merge(df_belief_change_vars, how="left").set_index('prolificId')
+
+"""
 # Feedback consistent or inconsistent with expectations?
 df_users['outcomeMatchPrediction'] = df_users.apply(
   lambda row: None if row['interventionPrediction'] == None else (
@@ -267,6 +278,15 @@ df_users['changeRelativeToOutcome_num'] = df_users.apply(
 
 # Change toward/away/noChange numerical
 # Calculates the amount of change from prediction to outcome (0, 1, or 2), and the direction with respect to feedback (toward +, away -)
+df_users['directionOfChange_num'] = df_users.apply(
+  lambda row: None if row['interventionPrediction'] == None or row['assessmentBelief'] == None else (
+    0 if row['interventionPrediction'] == row['assessmentBelief'] else (
+      -2 if row['interventionPrediction'] == row['interventionOutcome'] and row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else (
+        -1 if row['interventionPrediction'] == row['interventionOutcome'] else (
+          -1 if row['interventionPrediction'] == 'equal' and row['interventionPrediction'] != row['interventionOutcome'] != row['assessmentBelief'] else (
+            2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
+)
+
 
 # test function to make sure it's categorizing correctly; check manually
 # test = pd.DataFrame({
@@ -274,6 +294,29 @@ df_users['changeRelativeToOutcome_num'] = df_users.apply(
 #   'interventionOutcome' : (['restudy']*3 + ['equal']*3 + ['generate']*3) * 3,
 #   'assessmentBelief' : ['restudy', 'equal', 'generate']*9
 # })
+
+# test['outcomeMatchPrediction'] = test.apply(
+#   lambda row: None if row['interventionPrediction'] == None else (
+#     'match' if row['interventionPrediction'] == row['interventionOutcome'] else 'mismatch'), axis=1
+# )
+
+# test['directionOfChange'] = test.apply(
+#   lambda row: None if row['interventionPrediction'] == None or row['assessmentBelief'] == None else (
+#     'noChange' if row['interventionPrediction'] == row['assessmentBelief'] else (
+#       'away' if row['interventionPrediction'] == row['interventionOutcome'] else 'toward')), axis=1
+# )
+
+
+# test['changeRelativeToOutcome'] = test.apply(
+#   lambda row: 'consistent' if row['outcomeMatchPrediction'] == 'match' and row['directionOfChange'] == 'noChange' else (
+#     'consistent' if row['directionOfChange'] == 'toward' else (
+#       'inconsistent' if row['outcomeMatchPrediction'] == 'mismatch' and row['directionOfChange'] == 'noChange' else (
+#         'inconsistent' if row['directionOfChange'] == 'away' else None))), axis=1
+# )
+
+# test['changeRelativeToOutcome_num'] = test.apply(
+#   lambda row: 1 if row['changeRelativeToOutcome'] == 'consistent' else 0, axis=1
+# )
 
 
 # test['directionOfChange_num'] = test.apply(
@@ -285,15 +328,11 @@ df_users['changeRelativeToOutcome_num'] = df_users.apply(
 #             2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
 # )
 
-df_users['directionOfChange_num'] = df_users.apply(
-  lambda row: None if row['interventionPrediction'] == None or row['assessmentBelief'] == None else (
-    0 if row['interventionPrediction'] == row['assessmentBelief'] else (
-      -2 if row['interventionPrediction'] == row['interventionOutcome'] and row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else (
-        -1 if row['interventionPrediction'] == row['interventionOutcome'] else (
-          -1 if row['interventionPrediction'] == 'equal' and row['interventionPrediction'] != row['interventionOutcome'] != row['assessmentBelief'] else (
-            2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
-)
+# test.to_csv(
+#   "../data/test_variable_calcs.csv", encoding='utf-8'
+# )
 
+"""
 
 ### Calculate dimensions of feedback
 
@@ -341,8 +380,8 @@ df_users = df_users[[
   "assessmentTestScore",
   "assessmentTestScoreLevDist1",
   "assessmentTestScoreLevDist2",
-  "totalScore",
-  "bonusPayment",
+  # "totalScore",
+  # "bonusPayment",
   "effectivenessRestudy",
   "effectivenessRestudy_num",
   "effectivenessGenerate",
@@ -415,10 +454,10 @@ df_users_items = df_prolific.join(df_users_items, how='inner')
 df_users = df_prolific.join(df_users, how='inner')
 
 ### Create df for bonuses
-df_bonus = df_users_items[[
-  'prolificId',
-  'bonusPayment'
-]]
+# df_bonus = df_users_items[[
+#   'prolificId',
+#   'bonusPayment'
+# ]]
 
 ### Output to csv for R
 df_users_items.to_csv(
@@ -437,9 +476,9 @@ df_users.to_csv(
 )
 
 ### Output to csv for bonus payment
-df_bonus.to_csv(
-  "../data/{datePrefix}_diss-pilot-expt1_df-users-items_{versionSampleSuffix}_bonusPayment.csv".format(
-  datePrefix=datePrefix,
-  versionSampleSuffix=versionSampleSuffix
-  ), encoding='utf-8'
-)
+# df_bonus.to_csv(
+#   "../data/{datePrefix}_diss-pilot-expt1_df-users-items_{versionSampleSuffix}_bonusPayment.csv".format(
+#   datePrefix=datePrefix,
+#   versionSampleSuffix=versionSampleSuffix
+#   ), encoding='utf-8'
+# )

@@ -34,6 +34,12 @@ items_dict = data['items']
 df_users = pd.DataFrame.from_dict(users_dict, orient='index')
 df_items = pd.DataFrame.from_dict(items_dict, orient='index')
 
+
+### Read belief change variables
+df_belief_change_vars = pd.read_csv(
+  'variable_calcs_toImport.csv'
+)
+
 ### WRANGLE #######################################################################################
 ### Drop items with NaN in itemIndex
 df_items = df_items.dropna(subset=['itemIndex'])
@@ -255,6 +261,11 @@ df_users['assessmentBelief'] = df_users.apply(
 
 ### Calculate shift in beliefs
 
+# use manually calculated beliefs
+# reset_index() and set_index() lets you keep the index after merge
+df_users = df_users.reset_index().merge(df_belief_change_vars, how="left").set_index('prolificId')
+
+"""
 # Feedback consistent or inconsistent with expectations?
 df_users['outcomeMatchPrediction'] = df_users.apply(
   lambda row: None if row['interventionPrediction'] == None else (
@@ -308,7 +319,7 @@ df_users['directionOfChange_num'] = df_users.apply(
           -1 if row['interventionPrediction'] == 'equal' and row['interventionPrediction'] != row['interventionOutcome'] != row['assessmentBelief'] else (
             2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
 )
-
+"""
 
 ### Calculate dimensions of feedback
 
