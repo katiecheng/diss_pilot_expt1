@@ -36,8 +36,8 @@ df_items = pd.DataFrame.from_dict(items_dict, orient='index')
 
 
 ### Read belief change variables
-df_belief_change_vars = pd.read_csv(
-  'variable_calcs_toImport.csv'
+df_belief_change_vars_v2 = pd.read_csv(
+  'variable_calcs_toImport_v2.csv'
 )
 
 ### WRANGLE #######################################################################################
@@ -163,10 +163,17 @@ for n in range(1,3):
 
 ### CREATE ITEM-LEVEL VARS FOR ANALYSES ###########################################################
 ### Calculate new item-level variables TODO
-# difference between seeT-moveOn
+# difference between reveal-moveOn
 
 # totalLatency
 df_items['assessmentStrategyTotalLatency'] = df_items['assessmentStrategyRevealLatency'] + df_items['assessmentStrategyMoveOnLatency']
+
+# proportion reveal 
+df_items['assessmentStrategyProportionReveal'] = df_items['assessmentStrategyRevealLatency'] / df_items['assessmentStrategyTotalLatency']
+
+# proportion moveOn
+df_items['assessmentStrategyProportionMoveOn'] = df_items['assessmentStrategyMoveOnLatency'] / df_items['assessmentStrategyTotalLatency']
+
 
 ### Calculate summary stats in item-level data for user-level analyses TODO
 # average reveal latency on correct trials, and on incorrect trials
@@ -177,12 +184,16 @@ df_items['assessmentStrategyTotalLatency'] = df_items['assessmentStrategyRevealL
 revealMean = pd.DataFrame(group_pid["assessmentStrategyRevealLatency"].mean()).rename(columns={"assessmentStrategyRevealLatency": "avgAssessmentStrategyRevealLatency"})
 moveOnMean = pd.DataFrame(group_pid["assessmentStrategyMoveOnLatency"].mean()).rename(columns={"assessmentStrategyMoveOnLatency": "avgAssessmentStrategyMoveOnLatency"})
 totalMean = pd.DataFrame(group_pid["assessmentStrategyTotalLatency"].mean()).rename(columns={"assessmentStrategyTotalLatency": "avgAssessmentStrategyTotalLatency"})
+proportionRevealMean = pd.DataFrame(group_pid["assessmentStrategyProportionReveal"].mean()).rename(columns={"assessmentStrategyProportionReveal": "avgAssessmentStrategyProportionReveal"})
+proportionMoveOnMean = pd.DataFrame(group_pid["assessmentStrategyProportionMoveOn"].mean()).rename(columns={"assessmentStrategyProportionMoveOn": "avgAssessmentStrategyProportionMoveOn"})
 revealSD = pd.DataFrame(group_pid["assessmentStrategyRevealLatency"].std()).rename(columns={"assessmentStrategyRevealLatency": "sdAssessmentStrategyRevealLatency"})
 moveOnSD = pd.DataFrame(group_pid["assessmentStrategyMoveOnLatency"].std()).rename(columns={"assessmentStrategyMoveOnLatency": "sdAssessmentStrategyMoveOnLatency"})
 
 df_users = pd.merge(df_users, revealMean, how='left', on='prolificId')
 df_users = pd.merge(df_users, moveOnMean, how='left', on='prolificId')
 df_users = pd.merge(df_users, totalMean, how='left', on='prolificId')
+df_users = pd.merge(df_users, proportionRevealMean, how='left', on='prolificId')
+df_users = pd.merge(df_users, proportionMoveOnMean, how='left', on='prolificId')
 df_users = pd.merge(df_users, revealSD, how='left', on='prolificId')
 df_users = pd.merge(df_users, moveOnSD, how='left', on='prolificId')
 
@@ -248,7 +259,7 @@ df_users['assessmentBelief'] = df_users.apply(
 
 # use manually calculated beliefs
 # reset_index() and set_index() lets you keep the index after merge
-df_users = df_users.reset_index().merge(df_belief_change_vars, how="left").set_index('prolificId')
+df_users = df_users.reset_index().merge(df_belief_change_vars_v2, how="left").set_index('prolificId')
 
 """
 # Feedback consistent or inconsistent with expectations?
@@ -377,6 +388,8 @@ df_users = df_users[[
   "avgAssessmentStrategyMoveOnLatency",
   "sdAssessmentStrategyMoveOnLatency",
   "avgAssessmentStrategyTotalLatency",
+  "avgAssessmentStrategyProportionReveal",
+  "avgAssessmentStrategyProportionMoveOn",
   "assessmentTestScore",
   "assessmentTestScoreLevDist1",
   "assessmentTestScoreLevDist2",
@@ -392,10 +405,10 @@ df_users = df_users[[
   "assessmentBelief",
   "diff_assessmentBeliefRG_num",
   "outcomeMatchPrediction",
-  "directionOfChange",
-  "directionOfChange_num",
-  "changeRelativeToOutcome",
-  "changeRelativeToOutcome_num",
+  # "directionOfChange",
+  # "directionOfChange_num",
+  # "changeRelativeToOutcome",
+  # "changeRelativeToOutcome_num",
   "effort",
   "comments"
 ]]
@@ -409,15 +422,15 @@ df_items = df_items[[
   "interventionStrategy",
   "interventionStrategyUserInputRound1",
   "interventionStrategyAccuracyRound1",
-  # "interventionStrategyLevDistance",
-  # "interventionStrategyLevDist1",
-  # "interventionStrategyLevDist2",
+  "interventionStrategyLevDistance",
+  "interventionStrategyLevDist1",
+  "interventionStrategyLevDist2",
   "interventionStrategyUserInputRound2",
   "interventionStrategyAccuracyRound2",
   "interventionTestUserInput",
   "interventionTestAccuracy",
-  # "interventionTestLevDist1",
-  # "interventionTestLevDist2",
+  "interventionTestLevDist1",
+  "interventionTestLevDist2",
   "assessmentStudyOrder",
   "assessmentStrategyOrder",
   "assessmentTestOrder",
@@ -425,10 +438,12 @@ df_items = df_items[[
   "assessmentStrategyRevealLatency",
   "assessmentStrategyMoveOnLatency",
   "assessmentStrategyTotalLatency",
+  "assessmentStrategyProportionReveal",
+  "assessmentStrategyProportionMoveOn",
   "assessmentTestUserInput",
-  "assessmentTestAccuracy"
-  # "assessmentTestLevDist1",
-  # "assessmentTestLevDist2"
+  "assessmentTestAccuracy",
+  "assessmentTestLevDist1",
+  "assessmentTestLevDist2"
 ]]
 
 

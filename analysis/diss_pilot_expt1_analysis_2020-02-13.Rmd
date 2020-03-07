@@ -865,7 +865,20 @@ filter(df_v4n48_users) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), chang
 
 filter(df_v4n48_users) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), directionOfChange_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess)
 
+library(tidyquant) # plot moving average
+# moving average
+filter(df_v4n48_users) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_ma(ma_fun = SMA, n = 1)
 
+filter(df_v4n48_users) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_line(aes(y=rollmean(changeRelativeToOutcome_num, 1, na.pad=TRUE)))
+
+binomial_smooth <- function(...) {
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), ...)
+}
+
+filter(df_v4n48_users) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + binomial_smooth()
+
+
+filter(df_v4n48_users) %>% ggplot(aes(abs(diff_interventionTestOutcomeRG), changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess, span=1)
 ```
 
 # all together v2n48, v3n36, v4n48 expt 
@@ -904,14 +917,14 @@ df_v4n48_users$diff_interventionRestudyScoreToPrediction_ord <- as.ordered(df_v4
 
 means <- summarySE(df_v4n48_users, measurevar="changeRelativeToOutcome_num", groupvars=c("condition", "diff_interventionRestudyScoreToPrediction_ord"), na.rm=TRUE, conf.interval=0.95); means
   
-means %>% ggplot(aes(diff_interventionTestOutcomeRG_ord, changeRelativeToOutcome_num, color=condition, fill=condition)) + 
+means %>% ggplot(aes(diff_interventionRestudyScoreToPrediction_ord, changeRelativeToOutcome_num, color=condition, fill=condition)) + 
     geom_bar(position=position_dodge(.9), stat="identity") + 
     geom_errorbar(aes(ymin=changeRelativeToOutcome_num-ci, ymax=changeRelativeToOutcome_num+ci), width=.2, position=position_dodge(.9)) + 
     theme(axis.text.x = element_text(angle = 90))
 
 means <- summarySE(df_v4n48_users, measurevar="directionOfChange_num", groupvars=c("condition", "diff_interventionRestudyScoreToPrediction_ord"), na.rm=TRUE, conf.interval=0.95); means
   
-means %>% ggplot(aes(diff_interventionTestOutcomeRG_ord, directionOfChange_num, color=condition, fill=condition)) + 
+means %>% ggplot(aes(diff_interventionRestudyScoreToPrediction_ord, directionOfChange_num, color=condition, fill=condition)) + 
     geom_bar(position=position_dodge(.9), stat="identity") + 
     geom_errorbar(aes(ymin=directionOfChange_num-ci, ymax=directionOfChange_num+ci), width=.2, position=position_dodge(.9)) + 
     theme(axis.text.x = element_text(angle = 90))

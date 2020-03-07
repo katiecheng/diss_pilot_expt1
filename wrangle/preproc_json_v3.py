@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import Levenshtein as lev
 
-### For v4 version deployed 2020-02-06, with n=48 and new questionnaire
+### Works for v2 and v3
 
 ### Get user input for which files to process
 if(len(sys.argv) - 1 == 2):
@@ -245,21 +245,6 @@ df_users['effectivenessChosenStrategy_num'] = [effectivenessRating[rating] for r
 # df_users['effectivenessGenerate_num'] = pd.to_numeric(df_users['effectivenessGenerate_num'], errors='coerce')
 # df_users['effectivenessChosenStrategy_num'] = pd.to_numeric(df_users['effectivenessChosenStrategy_num'], errors='coerce')
 
-#effort rating; Carey 2010 Verbal label tables
-effortRating = {
-  "greatdeal": 77,
-  "alot": 55,
-  "moderate": 43,
-  "alittle": 12,
-  "none": 0,
-  "" : None
-}
-
-df_users['effortRestudy_num'] = [effortRating[rating] for rating in df_users['effortRestudy'] ] 
-df_users['effortGenerate_num'] = [effortRating[rating] for rating in df_users['effortGenerate'] ] 
-df_users['effortChosenStrategy_num'] = [effortRating[rating] for rating in df_users['effortChosenStrategy'] ] 
-df_users['effort_num'] = [effortRating[rating] for rating in df_users['effort'] ] 
-
 
 df_users['diff_assessmentBeliefRG_num'] = df_users['effectivenessRestudy_num'] - df_users['effectivenessGenerate_num']
 df_users['assessmentBelief'] = df_users.apply(
@@ -303,6 +288,15 @@ df_users['changeRelativeToOutcome_num'] = df_users.apply(
 
 # Change toward/away/noChange numerical
 # Calculates the amount of change from prediction to outcome (0, 1, or 2), and the direction with respect to feedback (toward +, away -)
+df_users['directionOfChange_num'] = df_users.apply(
+  lambda row: None if row['interventionPrediction'] == None or row['assessmentBelief'] == None else (
+    0 if row['interventionPrediction'] == row['assessmentBelief'] else (
+      -2 if row['interventionPrediction'] == row['interventionOutcome'] and row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else (
+        -1 if row['interventionPrediction'] == row['interventionOutcome'] else (
+          -1 if row['interventionPrediction'] == 'equal' and row['interventionPrediction'] != row['interventionOutcome'] != row['assessmentBelief'] else (
+            2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
+)
+
 
 # test function to make sure it's categorizing correctly; check manually
 # test = pd.DataFrame({
@@ -310,6 +304,29 @@ df_users['changeRelativeToOutcome_num'] = df_users.apply(
 #   'interventionOutcome' : (['restudy']*3 + ['equal']*3 + ['generate']*3) * 3,
 #   'assessmentBelief' : ['restudy', 'equal', 'generate']*9
 # })
+
+# test['outcomeMatchPrediction'] = test.apply(
+#   lambda row: None if row['interventionPrediction'] == None else (
+#     'match' if row['interventionPrediction'] == row['interventionOutcome'] else 'mismatch'), axis=1
+# )
+
+# test['directionOfChange'] = test.apply(
+#   lambda row: None if row['interventionPrediction'] == None or row['assessmentBelief'] == None else (
+#     'noChange' if row['interventionPrediction'] == row['assessmentBelief'] else (
+#       'away' if row['interventionPrediction'] == row['interventionOutcome'] else 'toward')), axis=1
+# )
+
+
+# test['changeRelativeToOutcome'] = test.apply(
+#   lambda row: 'consistent' if row['outcomeMatchPrediction'] == 'match' and row['directionOfChange'] == 'noChange' else (
+#     'consistent' if row['directionOfChange'] == 'toward' else (
+#       'inconsistent' if row['outcomeMatchPrediction'] == 'mismatch' and row['directionOfChange'] == 'noChange' else (
+#         'inconsistent' if row['directionOfChange'] == 'away' else None))), axis=1
+# )
+
+# test['changeRelativeToOutcome_num'] = test.apply(
+#   lambda row: 1 if row['changeRelativeToOutcome'] == 'consistent' else 0, axis=1
+# )
 
 
 # test['directionOfChange_num'] = test.apply(
@@ -321,14 +338,10 @@ df_users['changeRelativeToOutcome_num'] = df_users.apply(
 #             2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
 # )
 
-df_users['directionOfChange_num'] = df_users.apply(
-  lambda row: None if row['interventionPrediction'] == None or row['assessmentBelief'] == None else (
-    0 if row['interventionPrediction'] == row['assessmentBelief'] else (
-      -2 if row['interventionPrediction'] == row['interventionOutcome'] and row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else (
-        -1 if row['interventionPrediction'] == row['interventionOutcome'] else (
-          -1 if row['interventionPrediction'] == 'equal' and row['interventionPrediction'] != row['interventionOutcome'] != row['assessmentBelief'] else (
-            2 if row['interventionPrediction'] != 'equal' and row['assessmentBelief'] != 'equal' else 1))))), axis=1
-)
+# test.to_csv(
+#   "../data/test_variable_calcs.csv", encoding='utf-8'
+# )
+
 """
 
 ### Calculate dimensions of feedback
@@ -369,7 +382,6 @@ df_users = df_users[[
   "diff_interventionTestOutcomeRG",
   "diff_interventionRestudyScoreToPrediction",
   "diff_interventionGenerateScoreToPrediction",
-  "interventionFeedbackSurprise",
   "avgAssessmentStrategyRevealLatency",
   "sdAssessmentStrategyRevealLatency",
   "avgAssessmentStrategyMoveOnLatency",
@@ -384,19 +396,11 @@ df_users = df_users[[
   # "bonusPayment",
   "effectivenessRestudy",
   "effectivenessRestudy_num",
-  "effortRestudy",
-  "effortRestudy_num",
-  "howManyRestudy",
   "effectivenessGenerate",
   "effectivenessGenerate_num",
-  "effortGenerate",
-  "effortGenerate_num",
-  "howManyGenerate",
   "chosenStrategy",
   "effectivenessChosenStrategy",
   "effectivenessChosenStrategy_num",
-  "effortChosenStrategy",
-  "effortChosenStrategy_num",
   "assessmentBelief",
   "diff_assessmentBeliefRG_num",
   "outcomeMatchPrediction",
@@ -405,7 +409,6 @@ df_users = df_users[[
   "changeRelativeToOutcome",
   "changeRelativeToOutcome_num",
   "effort",
-  "effort_num",
   "comments"
 ]]
 
