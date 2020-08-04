@@ -22,435 +22,11 @@ library("ggalluvial") # for alluvial plot
 # hierarchical: differences btw groups, controlling for participant
 ```
 
-```{r import data}
-dir_proj <- here::here()
-dir_data <- fs::path(dir_proj, "data")
-
-df_v1n6 = read_csv(fs::path(dir_data, "2019-10-04_diss-pilot-expt1_df-users-items_v1n6.csv"), col_names=TRUE)
-df_v2n48 = read_csv(fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48.csv"), col_names=TRUE)
-df_v2n48_users = read_csv(fs::path(dir_data, "2019-10-31_diss-pilot-expt1_df-users-items_v2n48_users.csv"), col_names=TRUE)
-df_v3n36 = read_csv(fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36.csv"), col_names=TRUE)
-df_v3n36_users = read_csv(fs::path(dir_data, "2019-11-01_diss-pilot-expt1_df-users-items_v3n36_users_withQual.csv"), col_names=TRUE)
-
-## v4n48
-df_v4n48 = read_csv(fs::path(dir_data, "2020-02-07_diss-pilot-expt1_df-users-items_v4n48.csv"), col_names=TRUE)
-df_v4n48_users = read_csv(fs::path(dir_data, "2020-02-07_diss-pilot-expt1_df-users-items_v4n48_users_withQual.csv"), col_names=TRUE)
-
-# drop returned
-df_v2n48_users <- filter(df_v2n48_users, status!="RETURNED"); nrow(df_v2n48_users) # 50
-df_v3n36_users <- filter(df_v3n36_users, status!="RETURNED"); nrow(df_v3n36_users) # 37
-df_v2n48 <- filter(df_v2n48, status!="RETURNED")
-df_v3n36 <- filter(df_v3n36, status!="RETURNED")
-
-## v4n48
-df_v4n48_users <- filter(df_v4n48_users, status!="RETURNED" & status!="TIMED-OUT"); nrow(df_v4n48_users) # 48
-df_v4n48 <- filter(df_v4n48, status!="RETURNED" & status!="TIMED-OUT")
-
-
-# Create new dfs  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-#TODO fix so no error; upon import, treating all text areas as factors instead of character vectors
-
-v2FactCols <- c("prolificId",
-                "effectivenessRestudy",
-                "effectivenessGenerate", 
-                "chosenStrategy", 
-                "effectivenessChosenStrategy", 
-                "effort", 
-                "assessmentBelief")
-
-v2NumCols <- c("age",
-               "reviewed_at_datetime",
-               "effectivenessRestudy_num", 
-               "effectivenessGenerate_num", 
-               "diff_assessmentBeliefRG_num", 
-               "effectivenessChosenStrategy_num")
-
-v3FactCols <- c("prolificId",
-                "effectivenessRestudy",
-                "effectivenessGenerate", 
-                "chosenStrategy", 
-                "effectivenessChosenStrategy", 
-                "effort", 
-                "assessmentBelief", 
-                "directionOfChange", 
-                "changeRelativeToOutcome")
-
-v3NumCols <- c("age",
-               "reviewed_at_datetime",
-               "effectivenessRestudy_num", 
-               "effectivenessGenerate_num", 
-               "diff_assessmentBeliefRG_num", 
-               "effectivenessChosenStrategy_num", 
-               "directionOfChange_num", 
-               "changeRelativeToOutcome_num")
-
-v4FactCols_users <- c("prolificId",
-                "overallBetterWorseSame",
-                "noticedStrategy",
-                "effectivenessRestudy", 
-                "effortRestudy",
-                "effectivenessGenerate", 
-                "effortGenerate",
-                "chosenStrategy", 
-                "effectivenessChosenStrategy", 
-                "effortChosenStrategy",
-                "effort", 
-                "assessmentBelief", 
-                "directionOfChange", 
-                "changeRelativeToOutcome")
-
-v4FactCols_items <- c("prolificId",
-                "effectivenessRestudy", 
-                "effortRestudy",
-                "effectivenessGenerate", 
-                "effortGenerate",
-                "chosenStrategy", 
-                "effectivenessChosenStrategy", 
-                "effortChosenStrategy",
-                "effort", 
-                "assessmentBelief", 
-                "directionOfChange", 
-                "changeRelativeToOutcome")
-
-v4NumCols <- c("age",
-               "reviewed_at_datetime",
-               "effectivenessRestudy_num", 
-               "effortRestudy_num",
-               "howManyRestudy",
-               "effectivenessGenerate_num", 
-               "effortGenerate_num",
-               "howManyGenerate",
-               "diff_assessmentBeliefRG_num", 
-               "effectivenessChosenStrategy_num", 
-               "effortChosenStrategy_num",
-               "effort_num",
-               "directionOfChange_num", 
-               "changeRelativeToOutcome_num")
-
-
-df_v2n48_users[v2FactCols] <- lapply(df_v2n48_users[v2FactCols], factor)
-df_v2n48_users[v2NumCols] <- lapply(df_v2n48_users[v2NumCols], as.numeric)
-#df_v2n48_users[,v2FactCols] <- as.factor(NA)
-#df_v2n48_users[,v2NumCols] <- as.numeric(NA)
-df_v2n48[v2FactCols] <- lapply(df_v2n48[v2FactCols], factor)
-df_v2n48[v2NumCols] <- lapply(df_v2n48[v2NumCols], as.numeric)
-#df_v2n48[,v2FactCols] <- as.factor(NA)
-#df_v2n48[,v2NumCols] <- as.numeric(NA)
-
-df_v3n36_users[v3FactCols] <- lapply(df_v3n36_users[v3FactCols], factor)
-df_v3n36_users[v3NumCols] <- lapply(df_v3n36_users[v3NumCols], as.numeric)
-df_v3n36[v3FactCols] <- lapply(df_v3n36[v3FactCols], factor)
-df_v3n36[v3NumCols] <- lapply(df_v3n36[v3NumCols], as.numeric)
-
-## v4n48
-df_v4n48_users[v4FactCols_users] <- lapply(df_v4n48_users[v4FactCols_users], factor)
-df_v4n48_users[v4NumCols] <- lapply(df_v4n48_users[v4NumCols], as.numeric)
-df_v4n48[v4FactCols_items] <- lapply(df_v4n48[v4FactCols_items], factor)
-df_v4n48[v4NumCols] <- lapply(df_v4n48[v4NumCols], as.numeric)
-#df_v2n48_users[,v4FactCols] <- as.factor(NA)
-#df_v2n48_users[,v4NumCols] <- as.numeric(NA)
-#df_v2n48[,v4FactCols] <- as.factor(NA)
-#df_v2n48[,v4NumCols] <- as.numeric(NA)
-
-# drop excluded  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# calculate summary stats across group for exclusion
-
-## v2n48
-m_restudyScore_v2n48 <- mean(df_v2n48_users$interventionStrategyRestudyScoreRound1, na.rm=T); m_restudyScore_v2n48 # 8.7
-s_restudyScore_v2n48 <- sd(df_v2n48_users$interventionStrategyRestudyScoreRound1, na.rm=T); s_restudyScore_v2n48 # 2
-
-## v3n36
-m_restudyScore_v3n36 <- mean(df_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); m_restudyScore_v3n36 # 8.7
-s_restudyScore_v3n36 <- sd(df_v3n36_users$interventionStrategyRestudyScoreRound1, na.rm=T); s_restudyScore_v3n36 # 2
-
-## v4n48
-m_restudyScore_v4n48 <- mean(df_v4n48_users$interventionStrategyRestudyScoreRound1, na.rm=T); m_restudyScore_v4n48 # 9.4
-s_restudyScore_v4n48 <- sd(df_v4n48_users$interventionStrategyRestudyScoreRound1, na.rm=T); s_restudyScore_v4n48 # 1.05
-
-# drop at user level (restudyScore 3 SD below mean)
-
-df_v2n48_users <- filter(df_v2n48_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore_v2n48 - 3*s_restudyScore_v2n48); nrow(df_v2n48_users) # 48
-
-df_v3n36_users <- filter(df_v3n36_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore_v3n36 - 3*s_restudyScore_v3n36); nrow(df_v3n36_users) # 34
-
-## v4n48
-df_v4n48_users <- filter(df_v4n48_users, interventionStrategyRestudyScoreRound1 >= m_restudyScore_v4n48 - 3*s_restudyScore_v4n48); nrow(df_v4n48_users) # 47
-
-
-# drop at item level
-df_v2n48 <- filter(df_v2n48, prolificId %in% df_v2n48_users$prolificId); nrow(df_v2n48)/40
-df_v3n36 <- filter(df_v3n36, prolificId %in% df_v3n36_users$prolificId); nrow(df_v3n36)/40
-df_v4n48 <- filter(df_v4n48, prolificId %in% df_v4n48_users$prolificId); nrow(df_v4n48)/40
-
+```{r import & wrangle data}
+source("diss_v2-v4_import.R")
+source("diss_v2-v4_wrangle.R")
 ```
 
-
-```{r wrangle data}
-
-# Update variable types # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-df_v2n48_users$condition <- factor(df_v2n48_users$condition,
-                                         levels=c(0,1),
-                                         labels=c("control", "expt"))
-
-df_v2n48$condition <- factor(df_v2n48$condition,
-                                         levels=c(0,1),
-                                         labels=c("control", "expt"))
-
-df_v3n36_users$condition <- factor(df_v3n36_users$condition,
-                                         levels=c(0,1),
-                                         labels=c("control", "expt"))
-
-df_v3n36$condition <- factor(df_v3n36$condition,
-                                         levels=c(0,1),
-                                         labels=c("control", "expt"))
-
-df_v4n48_users$condition <- factor(df_v4n48_users$condition,
-                                         levels=c(0,1),
-                                         labels=c("control", "expt"))
-
-df_v4n48$condition <- factor(df_v4n48$condition,
-                                         levels=c(0,1),
-                                         labels=c("control", "expt"))
-
-# Create new variables # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# feedback type (none, equal, restudy, generate)
-
-df_v2n48_users$feedback <- factor(ifelse(
-  df_v2n48_users$condition=="control", "none",
-  ifelse(df_v2n48_users$interventionOutcome=="equal", "equal",
-         ifelse(df_v2n48_users$interventionOutcome=="restudy", "restudy", "generate"))))
-
-df_v2n48$feedback <- factor(ifelse(
-  df_v2n48$condition=="control", "none",
-  ifelse(df_v2n48$interventionOutcome=="equal", "equal",
-         ifelse(df_v2n48$interventionOutcome=="restudy", "restudy", "generate"))))
-
-df_v3n36_users$feedback <- factor(ifelse(
-  df_v3n36_users$condition=="control", "none",
-  ifelse(df_v3n36_users$interventionOutcome=="equal", "equal",
-         ifelse(df_v3n36_users$interventionOutcome=="restudy", "restudy", "generate"))))
-
-df_v3n36$feedback <- factor(ifelse(
-  df_v3n36$condition=="control", "none",
-  ifelse(df_v3n36$interventionOutcome=="equal", "equal",
-         ifelse(df_v3n36$interventionOutcome=="restudy", "restudy", "generate"))))
-                                                        
-## v4n48
-df_v4n48_users$feedback <- factor(ifelse(
-  df_v4n48_users$condition=="control", "none",
-  ifelse(df_v4n48_users$interventionOutcome=="equal", "equal",
-         ifelse(df_v4n48_users$interventionOutcome=="restudy", "restudy", "generate"))))
-
-df_v4n48$feedback <- factor(ifelse(
-  df_v4n48$condition=="control", "none",
-  ifelse(df_v4n48$interventionOutcome=="equal", "equal",
-         ifelse(df_v4n48$interventionOutcome=="restudy", "restudy", "generate"))))
-
-# check above
-# df_v2n48_v3n36_users[c("condition", "interventionOutcome", "feedback")]
-
-#effort rating; Carey 2010 Verbal label tables
-# effortRating <- c(
-#   "greatdeal" = 77,
-#   "alot" = 55,
-#   "moderate" = 43,
-#   "alittle" = 12,
-#   "not" = 0
-# )
-# 
-# df_v3n36_users$effort_num <- effortRating[as.character(df_v3n36_users$effort)]
-
-# which exceeded expectations more?
-df_v2n48_users$diff_interventionStrategyScoreExceedPrediction <- df_v2n48_users$diff_interventionRestudyScoreToPrediction - 
-  df_v2n48_users$diff_interventionGenerateScoreToPrediction
-
-df_v3n36_users$diff_interventionStrategyScoreExceedPrediction <- df_v3n36_users$diff_interventionRestudyScoreToPrediction - 
-  df_v3n36_users$diff_interventionGenerateScoreToPrediction
-
-## v4n48
-df_v4n48_users$diff_interventionStrategyScoreExceedPrediction <- df_v4n48_users$diff_interventionRestudyScoreToPrediction - 
-  df_v4n48_users$diff_interventionGenerateScoreToPrediction
-
-df_v4n48_users$diff_howManyRG <- df_v4n48_users$howManyRestudy - df_v4n48_users$howManyGenerate
-
-# scale predictions to be on the same scale as effectiveness ratings
-
-scaling_constant <- 10/1.69
-
-df_v3n36_users$changeBeliefRG_num <- df_v3n36_users$diff_assessmentBeliefRG_num - (df_v3n36_users$diff_interventionPredictRG * scaling_constant)
-
-## v4n48
-df_v4n48_users$changeBeliefRG_num <- df_v4n48_users$diff_assessmentBeliefRG_num - (df_v4n48_users$diff_interventionPredictRG * scaling_constant)
-
-df_v3n36_users$diff_assessmentBeliefRG_scale10 <- df_v3n36_users$diff_assessmentBeliefRG_num * scaling_constant
-
-## v4n48
-df_v4n48_users$diff_assessmentBeliefRG_scale10 <- df_v4n48_users$diff_assessmentBeliefRG_num * scaling_constant
-
-
-
-# approximate behavioral buckets
-
-df_v2n48$assessmentStrategyGenerated <- ifelse(df_v2n48$assessmentStrategyRevealLatency > 2000, "generated", "skipped")
-df_v2n48$assessmentStrategyRestudied <- ifelse(df_v2n48$assessmentStrategyMoveOnLatency > 2000, "restudied", "skipped")
-df_v2n48$assessmentStrategyGenerated_num <- ifelse(df_v2n48$assessmentStrategyRevealLatency > 2000, 1, 0)
-df_v2n48$assessmentStrategyRestudied_num <- ifelse(df_v2n48$assessmentStrategyMoveOnLatency > 2000, 1, 0)
-df_v2n48$assessmentStrategyNoneGenResBoth <- factor(with(df_v2n48, interaction(assessmentStrategyGenerated, assessmentStrategyRestudied)))
-df_v2n48$assessmentStrategySkippedSkipped_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "skipped.skipped", 1, 0)
-df_v2n48$assessmentStrategySkippedRestudied_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "skipped.restudied", 1, 0)
-df_v2n48$assessmentStrategyGeneratedSkipped_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "generated.skipped", 1, 0)
-df_v2n48$assessmentStrategyGeneratedRestudied_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "generated.restudied", 1, 0)
-
-behavBins <- df_v2n48 %>%
-  group_by(prolificId) %>%
-  dplyr::summarise(n_restudied = sum(assessmentStrategyRestudied_num, na.rm = TRUE),
-         n_generated = sum(assessmentStrategyGenerated_num, na.rm = TRUE),
-         n_skipped.skipped = sum(assessmentStrategySkippedSkipped_num, na.rm = TRUE),
-         n_skipped.restudied = sum(assessmentStrategySkippedRestudied_num, na.rm = TRUE),
-         n_generated.skipped = sum(assessmentStrategyGeneratedSkipped_num, na.rm = TRUE),
-         n_generated.restudied = sum(assessmentStrategyGeneratedRestudied_num, na.rm = TRUE))
-
-df_v2n48_users <- left_join(df_v2n48_users, behavBins, by="prolificId")
-
-
-
-df_v3n36$assessmentStrategyGenerated <- ifelse(df_v3n36$assessmentStrategyRevealLatency > 2000, "generated", "skipped")
-df_v3n36$assessmentStrategyRestudied <- ifelse(df_v3n36$assessmentStrategyMoveOnLatency > 2000, "restudied", "skipped")
-df_v3n36$assessmentStrategyGenerated_num <- ifelse(df_v3n36$assessmentStrategyRevealLatency > 2000, 1, 0)
-df_v3n36$assessmentStrategyRestudied_num <- ifelse(df_v3n36$assessmentStrategyMoveOnLatency > 2000, 1, 0)
-df_v3n36$assessmentStrategyNoneGenResBoth <- factor(with(df_v3n36, interaction(assessmentStrategyGenerated, assessmentStrategyRestudied)))
-df_v3n36$assessmentStrategySkippedSkipped_num <- ifelse(df_v3n36$assessmentStrategyNoneGenResBoth == "skipped.skipped", 1, 0)
-df_v3n36$assessmentStrategySkippedRestudied_num <- ifelse(df_v3n36$assessmentStrategyNoneGenResBoth == "skipped.restudied", 1, 0)
-df_v3n36$assessmentStrategyGeneratedSkipped_num <- ifelse(df_v3n36$assessmentStrategyNoneGenResBoth == "generated.skipped", 1, 0)
-df_v3n36$assessmentStrategyGeneratedRestudied_num <- ifelse(df_v3n36$assessmentStrategyNoneGenResBoth == "generated.restudied", 1, 0)
-
-behavBins <- df_v3n36 %>%
-  group_by(prolificId) %>%
-  dplyr::summarise(n_restudied = sum(assessmentStrategyRestudied_num, na.rm = TRUE),
-         n_generated = sum(assessmentStrategyGenerated_num, na.rm = TRUE),
-         n_skipped.skipped = sum(assessmentStrategySkippedSkipped_num, na.rm = TRUE),
-         n_skipped.restudied = sum(assessmentStrategySkippedRestudied_num, na.rm = TRUE),
-         n_generated.skipped = sum(assessmentStrategyGeneratedSkipped_num, na.rm = TRUE),
-         n_generated.restudied = sum(assessmentStrategyGeneratedRestudied_num, na.rm = TRUE))
-
-df_v3n36_users <- left_join(df_v3n36_users, behavBins, by="prolificId")
-
-
-df_v2n48$assessmentStrategyGenerated <- ifelse(df_v2n48$assessmentStrategyRevealLatency > 2000, "generated", "skipped")
-df_v2n48$assessmentStrategyRestudied <- ifelse(df_v2n48$assessmentStrategyMoveOnLatency > 2000, "restudied", "skipped")
-df_v2n48$assessmentStrategyGenerated_num <- ifelse(df_v2n48$assessmentStrategyRevealLatency > 2000, 1, 0)
-df_v2n48$assessmentStrategyRestudied_num <- ifelse(df_v2n48$assessmentStrategyMoveOnLatency > 2000, 1, 0)
-df_v2n48$assessmentStrategyNoneGenResBoth <- factor(with(df_v2n48, interaction(assessmentStrategyGenerated, assessmentStrategyRestudied)))
-df_v2n48$assessmentStrategySkippedSkipped_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "skipped.skipped", 1, 0)
-df_v2n48$assessmentStrategySkippedRestudied_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "skipped.restudied", 1, 0)
-df_v2n48$assessmentStrategyGeneratedSkipped_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "generated.skipped", 1, 0)
-df_v2n48$assessmentStrategyGeneratedRestudied_num <- ifelse(df_v2n48$assessmentStrategyNoneGenResBoth == "generated.restudied", 1, 0)
-
-behavBins <- df_v2n48 %>%
-  group_by(prolificId) %>%
-  dplyr::summarise(n_restudied = sum(assessmentStrategyRestudied_num, na.rm = TRUE),
-         n_generated = sum(assessmentStrategyGenerated_num, na.rm = TRUE),
-         n_skipped.skipped = sum(assessmentStrategySkippedSkipped_num, na.rm = TRUE),
-         n_skipped.restudied = sum(assessmentStrategySkippedRestudied_num, na.rm = TRUE),
-         n_generated.skipped = sum(assessmentStrategyGeneratedSkipped_num, na.rm = TRUE),
-         n_generated.restudied = sum(assessmentStrategyGeneratedRestudied_num, na.rm = TRUE))
-
-df_v2n48_users <- left_join(df_v2n48_users, behavBins, by="prolificId")
-
-## v4n48
-df_v4n48$assessmentStrategyGenerated <- ifelse(df_v4n48$assessmentStrategyRevealLatency > 2000, "generated", "skipped")
-df_v4n48$assessmentStrategyRestudied <- ifelse(df_v4n48$assessmentStrategyMoveOnLatency > 2000, "restudied", "skipped")
-df_v4n48$assessmentStrategyGenerated_num <- ifelse(df_v4n48$assessmentStrategyRevealLatency > 2000, 1, 0)
-df_v4n48$assessmentStrategyRestudied_num <- ifelse(df_v4n48$assessmentStrategyMoveOnLatency > 2000, 1, 0)
-df_v4n48$assessmentStrategyNoneGenResBoth <- factor(with(df_v4n48, interaction(assessmentStrategyGenerated, assessmentStrategyRestudied)))
-df_v4n48$assessmentStrategySkippedSkipped_num <- ifelse(df_v4n48$assessmentStrategyNoneGenResBoth == "skipped.skipped", 1, 0)
-df_v4n48$assessmentStrategySkippedRestudied_num <- ifelse(df_v4n48$assessmentStrategyNoneGenResBoth == "skipped.restudied", 1, 0)
-df_v4n48$assessmentStrategyGeneratedSkipped_num <- ifelse(df_v4n48$assessmentStrategyNoneGenResBoth == "generated.skipped", 1, 0)
-df_v4n48$assessmentStrategyGeneratedRestudied_num <- ifelse(df_v4n48$assessmentStrategyNoneGenResBoth == "generated.restudied", 1, 0)
-
-behavBins <- df_v4n48 %>%
-  group_by(prolificId) %>%
-  dplyr::summarise(n_restudied = sum(assessmentStrategyRestudied_num, na.rm = TRUE),
-         n_generated = sum(assessmentStrategyGenerated_num, na.rm = TRUE),
-         n_skipped.skipped = sum(assessmentStrategySkippedSkipped_num, na.rm = TRUE),
-         n_skipped.restudied = sum(assessmentStrategySkippedRestudied_num, na.rm = TRUE),
-         n_generated.skipped = sum(assessmentStrategyGeneratedSkipped_num, na.rm = TRUE),
-         n_generated.restudied = sum(assessmentStrategyGeneratedRestudied_num, na.rm = TRUE))
-
-df_v4n48_users <- left_join(df_v4n48_users, behavBins, by="prolificId")
-
-
-df_v4n48_users$howManyRestudy_bin <- ifelse(df_v4n48_users$howManyRestudy > 10, ">10 restudy", "<10 restudy")
-df_v4n48_users$howManyGenerate_bin <- ifelse(df_v4n48_users$howManyGenerate > 10, ">10 generate", "<10 generate")
-df_v4n48_users$howManyRestudy_bin_num <- ifelse(df_v4n48_users$howManyRestudy > 10, 1, 0)
-df_v4n48_users$howManyGenerate_bin_num <- ifelse(df_v4n48_users$howManyGenerate > 10, 1, 0)
-df_v4n48_users$howManyNoneGenResBoth <- factor(with(df_v4n48_users, interaction(howManyGenerate_bin, howManyRestudy_bin)))
-
-# behav proportion bins
-df_v2n48_users$avgMoreReveal <- factor(ifelse(df_v2n48_users$avgAssessmentStrategyProportionReveal>.5, 1, 0))
-df_v3n36_users$avgMoreReveal <- factor(ifelse(df_v3n36_users$avgAssessmentStrategyProportionReveal>.5, 1, 0))
-df_v4n48_users$avgMoreReveal <- factor(ifelse(df_v4n48_users$avgAssessmentStrategyProportionReveal>.5, 1, 0))
-
-behavBins <- df_v4n48 %>%
-  group_by(prolificId) %>%
-  dplyr::summarise(n_restudied = sum(assessmentStrategyRestudied_num, na.rm = TRUE),
-         n_generated = sum(assessmentStrategyGenerated_num, na.rm = TRUE),
-         n_skipped.skipped = sum(assessmentStrategySkippedSkipped_num, na.rm = TRUE),
-         n_skipped.restudied = sum(assessmentStrategySkippedRestudied_num, na.rm = TRUE),
-         n_generated.skipped = sum(assessmentStrategyGeneratedSkipped_num, na.rm = TRUE),
-         n_generated.restudied = sum(assessmentStrategyGeneratedRestudied_num, na.rm = TRUE))
-
-# reorder variable levels
-df_v2n48_users$interventionPrediction <- factor(df_v2n48_users$interventionPrediction, levels = c("generate", "equal", "restudy"))
-df_v2n48_users$interventionOutcome <- factor(df_v2n48_users$interventionOutcome, levels = c("generate", "equal", "restudy"))
-
-df_v3n36_users$interventionPrediction <- factor(df_v3n36_users$interventionPrediction, levels = c("generate", "equal", "restudy"))
-df_v3n36_users$interventionOutcome <- factor(df_v3n36_users$interventionOutcome, levels = c("generate", "equal", "restudy"))
-df_v3n36_users$assessmentBelief <- factor(df_v3n36_users$assessmentBelief, levels = c("generate", "equal", "restudy"))
-
-df_v4n48_users$interventionPrediction <- factor(df_v4n48_users$interventionPrediction, levels = c("generate", "equal", "restudy"))
-df_v4n48_users$interventionOutcome <- factor(df_v4n48_users$interventionOutcome, levels = c("generate", "equal", "restudy"))
-df_v4n48_users$assessmentBelief <- factor(df_v4n48_users$assessmentBelief, levels = c("generate", "equal", "restudy"))
-
-
-# REG to numeric
-df_v2n48_users$interventionPrediction_num <- ifelse(df_v2n48_users$interventionPrediction =="generate", -1, 
-                                        ifelse(df_v2n48_users$interventionPrediction == "equal", 0, 
-                                          ifelse(df_v2n48_users$interventionPrediction == "restudy", 1, NA)))
-df_v2n48_users$interventionOutcome_num <- ifelse(df_v2n48_users$interventionOutcome =="generate", -1, 
-                                        ifelse(df_v2n48_users$interventionOutcome == "equal", 0, 
-                                          ifelse(df_v2n48_users$interventionOutcome == "restudy", 1, NA)))
-df_v2n48_users$assessmentBelief_num <- ifelse(df_v2n48_users$assessmentBelief =="generate", -1, 
-                                        ifelse(df_v2n48_users$assessmentBelief == "equal", 0, 
-                                          ifelse(df_v2n48_users$assessmentBelief == "restudy", 1, NA)))
-df_v3n36_users$interventionPrediction_num <- ifelse(df_v3n36_users$interventionPrediction =="generate", -1, 
-                                        ifelse(df_v3n36_users$interventionPrediction == "equal", 0, 
-                                          ifelse(df_v3n36_users$interventionPrediction == "restudy", 1, NA)))
-df_v3n36_users$interventionOutcome_num <- ifelse(df_v3n36_users$interventionOutcome =="generate", -1, 
-                                        ifelse(df_v3n36_users$interventionOutcome == "equal", 0, 
-                                          ifelse(df_v3n36_users$interventionOutcome == "restudy", 1, NA)))
-df_v3n36_users$assessmentBelief_num <- ifelse(df_v3n36_users$assessmentBelief =="generate", -1, 
-                                        ifelse(df_v3n36_users$assessmentBelief == "equal", 0, 
-                                          ifelse(df_v3n36_users$assessmentBelief == "restudy", 1, NA)))
-df_v4n48_users$interventionPrediction_num <- ifelse(df_v4n48_users$interventionPrediction =="generate", -1, 
-                                        ifelse(df_v4n48_users$interventionPrediction == "equal", 0, 
-                                          ifelse(df_v4n48_users$interventionPrediction == "restudy", 1, NA)))
-df_v4n48_users$interventionOutcome_num <- ifelse(df_v4n48_users$interventionOutcome =="generate", -1, 
-                                        ifelse(df_v4n48_users$interventionOutcome == "equal", 0, 
-                                          ifelse(df_v4n48_users$interventionOutcome == "restudy", 1, NA)))
-df_v4n48_users$assessmentBelief_num <- ifelse(df_v4n48_users$assessmentBelief =="generate", -1, 
-                                        ifelse(df_v4n48_users$assessmentBelief == "equal", 0, 
-                                          ifelse(df_v4n48_users$assessmentBelief == "restudy", 1, NA)))
-
-
-# drop unused factor levels
-df_v4n48 <- droplevels(df_v4n48)
-df_v4n48_users <- droplevels(df_v4n48_users)
-```
 
 # Retrieval effect
 ```{r retrieval effect on failedGenerate?}
@@ -518,6 +94,7 @@ t/t["Sum"] # restudy, correct on test 38.5% of the time
 # but even when you get it wrong, you reap almost as much benefit as if you use restudy
 
 ```
+
 
 
 # v2n48
@@ -602,6 +179,7 @@ outTbl / outTbl["Sum"]
 
 
 ```
+
 ```{r v2n48 strategy expt vs. control, fig.width=1, fig.height=2}
 
 # strategy learning
@@ -617,6 +195,19 @@ summary(lm(mean ~ measures, melt)) # 0.1483
 
 ```
 
+```{r v2n48 expt vs. control learning outcomes}
+
+melt <- tidyr::gather(df_v2n48_users, key="testScore", value="mean", interventionTestScore, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "testScore"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(testScore, mean, fill=condition)) + 
+    geom_bar(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90))
+
+summary(lm(mean ~ condition * testScore, melt)) # 0.3542
+
+```
 
 ```{r v2n48 expt vs control}
 # no beliefs
@@ -797,6 +388,44 @@ means %>% ggplot(aes(measures, value)) +
 
 ```
 
+
+```{r v3n36 how many each condition?}
+table(df_v3n36_users$condition) # control 0, expt 34
+
+```
+
+```{r v3n36 how many change beliefs each condition?}
+
+table(df_v3n36_users$condition, df_v3n36_users$changeBeliefs) # control 0, expt 34
+# control 0
+# expt 19/28 (68%)
+
+
+table(predict=df_v3n36_users$interventionPrediction, final=df_v3n36_users$assessmentBelief, df_v3n36_users$condition, df_v3n36_users$changeBeliefs) # control 25, expt 21
+
+```
+
+```{r v3n36 how many change beliefs *consistent* in each condition?}
+
+table(df_v3n36_users$changeBeliefs, df_v3n36_users$changeRelativeToOutcome, df_v3n36_users$condition) # control 25, expt 21
+# control of those who changed, 9 changed consistent, 4 inconsistent
+# expt of those who changed, 9 changed consistent, 4 inconsistent
+
+```
+```{r v3n36 expt learning outcomes}
+
+melt <- tidyr::gather(df_v3n36_users, key="testScore", value="mean", interventionTestScore, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("testScore"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(testScore, mean)) + 
+    geom_bar(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90))
+
+summary(lm(mean ~ testScore, melt)) # 0.0795
+
+```
+
 ```{r v3n36 No expt vs control}
 # no control group
 
@@ -853,6 +482,35 @@ beliefTbl / beliefTbl["Sum"]
 # Expt REG: 24 35 41
 
 ```
+
+```{r v3n36 how many from each pred*outcome type change beliefs? by condition}
+
+# CHANGE BELIEFS: no change first, then change
+table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome, df_v3n36_users$changeBeliefs)
+
+#expt
+truet <- table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome, df_v3n36_users$changeBeliefs)[,,2]; truet
+allt <- table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome); allt
+truet/allt
+
+# FINAL CONSISTENT WITH OUTCOME, GIVEN PREDICTION: consistent first, then inconsistent
+table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome, df_v3n36_users$changeRelativeToOutcome)
+
+#expt
+truet <- table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome, df_v3n36_users$changeRelativeToOutcome)[,,1]; truet
+allt <- table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome); allt
+truet/allt
+
+# FINAL ALIGNED WITH OUTCOME: misaligned first, then aligned
+table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome, df_v3n36_users$finalMatchOutcome)
+
+#expt
+truet <- table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome, df_v3n36_users$finalMatchOutcome)[,,2]; truet
+allt <- table(df_v3n36_users$interventionPrediction, df_v3n36_users$interventionOutcome); allt
+truet/allt
+
+```
+
 ```{r v3n36 belief plots, fig.width=1, fig.height=2}
 
 ggplot(filter(df_v3n36_users, !is.na(interventionPrediction)), aes(interventionPrediction)) + geom_bar() + 
@@ -1123,6 +781,7 @@ median(filter(df_v4n48_users, age<100 &condition=="control")$age, na.rm=T) # 30
 
 
 ```
+
 ```{r v4n48 demographics related to results?}
 
 #sex
@@ -1135,11 +794,18 @@ summary(lm(diff_assessmentBeliefRG_num ~ Sex, filter(df_v4n48_users, condition==
 
 #age
 # Change prediction to outcome consistent or inconsistent with feedback (0 or 1)
-summary(lm(changeRelativeToOutcome_num ~ age, filter(df_v4n48_users, condition=="expt"))) # ns
+summary(lm(changeRelativeToOutcome_num ~ age, filter(df_v4n48_users,age<100 & condition=="expt"))) # ns
 # Change prediction to outcome, relative to feedback (-2 to 2 )
-summary(lm(directionOfChange_num ~ age, filter(df_v4n48_users, condition=="expt"))) # ns
+summary(lm(directionOfChange_num ~ age, filter(df_v4n48_users,  age<100 & condition=="expt"))) # 0.07735
 # Change prediction to outcome, relative to feedback (final diff RG)
-summary(lm(diff_assessmentBeliefRG_num ~ age, filter(df_v4n48_users, condition=="expt"))) # ns
+summary(lm(diff_assessmentBeliefRG_num ~ age, filter(df_v4n48_users, age<100 & condition=="expt"))) # ns
+
+filter(df_v4n48_users,  age<100) %>% ggplot(aes(age, changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=lm)
+filter(df_v4n48_users,  age<100) %>% ggplot(aes(age, changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess)
+
+filter(df_v4n48_users,  age<100) %>% ggplot(aes(age, directionOfChange_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=lm)
+filter(df_v4n48_users,  age<100) %>% ggplot(aes(age, directionOfChange_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess)
+
 
 #employ
 # Change prediction to outcome consistent or inconsistent with feedback (0 or 1)
@@ -1150,6 +816,7 @@ summary(lm(directionOfChange_num ~ `Employment Status`, filter(df_v4n48_users, c
 summary(lm(diff_assessmentBeliefRG_num ~ `Employment Status`, filter(df_v4n48_users, condition=="expt"))) # 0.05361; part time more likely to believe restudy
 
 ```
+
 ```{r v4n48 change by initial belief category by condition}
 
 #expt
@@ -1180,6 +847,12 @@ summary(lm(changeRelativeToOutcome_num ~ diff_PredictRGToOutcomeRG * condition, 
 df_v4n48_users %>% ggplot(aes(y=changeRelativeToOutcome_num, x=diff_PredictRGToOutcomeRG), fill=condition) + geom_jitter(width=.1, height=.1) + geom_smooth(method = lm, formula = y ~ splines::bs(x, 2))
 ```
 
+```{r v4n48 how many change beliefs *consistent* in each condition?}
+
+addmargins(table(df_v4n48_users$changeBeliefs, df_v4n48_users$changeRelativeToOutcome, df_v4n48_users$condition)) # control 23, expt 24
+
+```
+
 ```{r v4n48 strategy expt vs. control, fig.width=1, fig.height=2}
 
 # strategy learning
@@ -1194,6 +867,20 @@ means %>% ggplot(aes(measures, mean)) +
 summary(lm(mean ~ measures, melt)) # 0.4317
 
 ```
+```{r v4n48 expt vs. control learning outcomes}
+
+melt <- tidyr::gather(df_v4n48_users, key="testScore", value="mean", interventionTestScore, assessmentTestScore, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="mean", groupvars=c("condition", "testScore"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(testScore, mean, fill=condition)) + 
+    geom_bar(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=mean-ci, ymax=mean+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90))
+
+summary(lm(mean ~ condition * testScore, melt)) # 0.1041
+
+```
+
 ```{r v4n48 consistency expt vs. control, fig.width=1, fig.height=2}
 
 # strategy learning
@@ -1210,6 +897,21 @@ means %>% ggplot(aes(measures, value, fill=condition)) +
 
 ```
 
+```{r v4n48 consistency expt vs. control}
+
+# strategy learning
+melt <- tidyr::gather(df_v4n48_users, key="measures", value="value", finalMatchOutcome, factor_key = TRUE) # factor_key preserves order
+means <- summarySE(melt, measurevar="value", groupvars=c("condition","measures"), na.rm=TRUE, conf.interval=0.95); means
+  
+means %>% ggplot(aes(measures, value, fill=condition)) + 
+    geom_bar(position=position_dodge(.9), stat="identity") +
+    theme(axis.text.x = element_text(angle = 90)) + 
+    theme(legend.position = "none")
+
+#no, this is not a continuous variable; I shouldn't do this
+summary(lm(finalMatchOutcome_num ~ condition, df_v4n48_users)) # 0.04486
+
+```
 
 ```{r v4n48 expt vs control}
 
@@ -1356,6 +1058,21 @@ ggplot(freq, aes(y=Freq, axis1=assessmentBelief, axis2=interventionOutcome, axis
   facet_wrap(vars(condition)) + 
   scale_fill_brewer(palette="RdYlGn")
 
+
+freq <- subset(as.data.frame(table(interventionPrediction=df_v4n48_users$interventionPrediction, interventionOutcome=df_v4n48_users$interventionOutcome, assessmentBelief=df_v4n48_users$assessmentBelief, finalMatchOutcome_num=df_v4n48_users$finalMatchOutcome_num, condition=df_v4n48_users$condition)), Freq != 0)
+
+
+ggplot(freq, aes(y=Freq, axis1=assessmentBelief, axis2=interventionOutcome, axis3=interventionPrediction)) +
+  geom_alluvium(aes(fill = finalMatchOutcome_num), width = 1/12, alpha=.7) +
+  geom_stratum(width = 1/8)+
+  geom_text(stat = "stratum", infer.label = TRUE) +
+  scale_x_continuous(breaks = 1:3, labels = c("assessmentBelief", "interventionOutcome", "interventionPrediction")) +
+  scale_y_continuous(breaks = 0:sum(freq$Freq)) + 
+  coord_flip() + 
+  theme(legend.position = "bottom") + 
+  facet_wrap(vars(condition)) 
+
+
 ```
 
 ```{r v4n48 expt vs control * REG outcome}
@@ -1463,6 +1180,76 @@ beliefTbl / beliefTbl["Sum"]
 # REG 55 28 17
 
 ```
+
+```{r v4n48 how many from each pred*outcome type change beliefs? by condition}
+
+# CHANGE BELIEFS: no change first, then change
+table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$changeBeliefs)
+
+truet <- table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$changeBeliefs)[,,2]; truet
+allt <- table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome); allt
+truet/allt
+
+
+# FINAL CONSISTENT WITH OUTCOME, GIVEN PREDICTION: consistent first, then inconsistent
+table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$changeRelativeToOutcome)
+
+truet <- table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$changeRelativeToOutcome)[,,1]; truet
+allt <- table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome); allt
+truet/allt
+
+# FINAL ALIGNED WITH OUTCOME: misaligned first, then aligned
+table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$finalMatchOutcome)
+
+truet <- table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$finalMatchOutcome)[,,2]; truet
+allt <- table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome); allt
+truet/allt
+
+```
+
+```{r v4n48 how many from each pred*outcome type change beliefs? by condition}
+
+# CHANGE BELIEFS: no change first, then change
+table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$changeBeliefs)
+
+#expt
+truet <- table(df_v4n48_users_expt$interventionPrediction, df_v4n48_users_expt$interventionOutcome, df_v4n48_users_expt$changeBeliefs)[,,2]; truet
+allt <- table(df_v4n48_users_expt$interventionPrediction, df_v4n48_users_expt$interventionOutcome); allt
+truet/allt
+
+#control
+truet <- table(df_v4n48_users_control$interventionPrediction, df_v4n48_users_control$interventionOutcome, df_v4n48_users_control$changeBeliefs)[,,2]; truet
+allt <- table(df_v4n48_users_control$interventionPrediction, df_v4n48_users_control$interventionOutcome); allt
+truet/allt
+
+# FINAL CONSISTENT WITH OUTCOME, GIVEN PREDICTION: consistent first, then inconsistent
+table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$changeRelativeToOutcome)
+
+#expt
+truet <- table(df_v4n48_users_expt$interventionPrediction, df_v4n48_users_expt$interventionOutcome, df_v4n48_users_expt$changeRelativeToOutcome)[,,1]; truet
+allt <- table(df_v4n48_users_expt$interventionPrediction, df_v4n48_users_expt$interventionOutcome); allt
+truet/allt
+
+#control
+truet <- table(df_v4n48_users_control$interventionPrediction, df_v4n48_users_control$interventionOutcome, df_v4n48_users_control$changeRelativeToOutcome)[,,1]; truet
+allt <- table(df_v4n48_users_control$interventionPrediction, df_v4n48_users_control$interventionOutcome); allt
+truet/allt
+
+# FINAL ALIGNED WITH OUTCOME: misaligned first, then aligned
+table(df_v4n48_users$interventionPrediction, df_v4n48_users$interventionOutcome, df_v4n48_users$finalMatchOutcome)
+
+#expt
+truet <- table(df_v4n48_users_expt$interventionPrediction, df_v4n48_users_expt$interventionOutcome, df_v4n48_users_expt$finalMatchOutcome)[,,2]; truet
+allt <- table(df_v4n48_users_expt$interventionPrediction, df_v4n48_users_expt$interventionOutcome); allt
+truet/allt
+
+#control
+truet <- table(df_v4n48_users_control$interventionPrediction, df_v4n48_users_control$interventionOutcome, df_v4n48_users_control$finalMatchOutcome)[,,2]; truet
+allt <- table(df_v4n48_users_control$interventionPrediction, df_v4n48_users_control$interventionOutcome); allt
+truet/allt
+
+```
+
 
 ```{r v4n48 belief plots, fig.width=1, fig.height=2}
 
@@ -2086,19 +1873,6 @@ filter(df_v4n48_users) %>% ggplot(aes(diff_interventionPredictRG, diff_intervent
 
 ```{r combining v3 and v4 expt to look at aspects of feedback}
 
-colnames = names(df_v3n36_users)[names(df_v3n36_users) %in% c("started_datetime", "completed_date_time", "reviewed_at_datetime", "startDateTime", "endDateTime") ==F]
-
-df_v3n36_v4n48_users = union(df_v3n36_users[colnames], df_v4n48_users[colnames])
-
-v3v4factcols <- c("prolificId",
-"effectivenessRestudy",
-"chosenStrategy",
-"directionOfChange",
-"changeRelativeToOutcome",
-"feedback")
-
-df_v3n36_v4n48_users[v3v4factcols] <- lapply(df_v3n36_v4n48_users[v3v4factcols], factor)
-
 
 summary(lm(changeRelativeToOutcome_num ~ abs(diff_interventionTestOutcomeRG), filter(df_v3n36_v4n48_users, condition=="expt"))) # 0.09356; trend
 
@@ -2521,14 +2295,19 @@ summary(lm(howManyGenerate ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.2
 df_v4n48_users %>% ggplot(aes(diff_assessmentBeliefRG_num, howManyRestudy)) + geom_point() + geom_smooth()
 df_v4n48_users %>% ggplot(aes(diff_assessmentBeliefRG_num, howManyGenerate)) + geom_point() + geom_smooth()
 
-summary(lm(avgAssessmentStrategyRevealLatency ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.389
-summary(lm(avgAssessmentStrategyMoveOnLatency ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.8674
 
 summary(lm(avgAssessmentStrategyProportionReveal ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.5804; exact opposites
 summary(lm(avgAssessmentStrategyProportionMoveOn ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.5804; exact opposites
 
 df_v4n48_users %>% ggplot(aes(diff_assessmentBeliefRG_num, avgAssessmentStrategyProportionReveal)) + geom_point() + geom_smooth()
 df_v4n48_users %>% ggplot(aes(diff_assessmentBeliefRG_num, avgAssessmentStrategyProportionMoveOn)) + geom_point() + geom_smooth()
+
+
+summary(lm(avgAssessmentStrategyRevealLatency ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.389
+summary(lm(avgAssessmentStrategyMoveOnLatency ~ diff_assessmentBeliefRG_num, df_v4n48_users)) # 0.8674
+
+df_v4n48_users %>% ggplot(aes(diff_assessmentBeliefRG_num, avgAssessmentStrategyRevealLatency)) + geom_point() + geom_smooth(method=lm)
+df_v4n48_users %>% ggplot(aes(diff_assessmentBeliefRG_num, avgAssessmentStrategyMoveOnLatency)) + geom_point() + geom_smooth(method=lm)
 
 ```
 
@@ -2912,5 +2691,98 @@ summary(lm(avgAssessmentStrategyProportionReveal ~ assessmentBelief * condition,
 summary(lm(avgAssessmentStrategyProportionMoveOn ~ assessmentBelief * condition, df_v3v4_strongBelief_users)) # 0.9173; exact opposites
 
 
+
+```
+
+# testing hypotheses for aspect of feedback analysis
+
+```{r defining math-prediction diffRG users}
+
+table(df_v3n36_v4n48_users$outcomeMatchPrediction, df_v3n36_v4n48_users$diff_interventionTestOutcomeRG, df_v3n36_v4n48_users$condition)
+
+df_v3v4_expt_matchPred_diffRG_users <- filter(df_v3n36_v4n48_users,
+                                              condition=="expt" & 
+                                              outcomeMatchPrediction == "match" &
+                                              diff_interventionTestOutcomeRG!=0); nrow(df_v3v4_expt_matchPred_diffRG_users)
+
+# complication; the diff can match, but the actual numbers might be different. E.g. I might think R=6, G=5 (diff 1), but actually R=7, G=6 (still diff 1)
+# so the absolute size of the diff may be the same, but the relative size differs depending on the absolute score
+# but...maybe it's all the same when we're operating on 1-10 scales
+# let's say it's all about the same, for the time being. can revisit scaling the diff if need be
+
+
+
+# Change prediction to outcome consistent or inconsistent with feedback (0 or 1)
+summary(lm(changeRelativeToOutcome_num ~ diff_interventionTestOutcomeRG, df_v3v4_expt_matchPred_diffRG_users)) # 0.9648
+
+# Change prediction to outcome, relative to feedback (-2 to 2 )
+summary(lm(directionOfChange_num ~ diff_interventionTestOutcomeRG, df_v4n48_users)) # 0.8437
+
+# Change prediction to outcome, relative to feedback (final diff RG)
+summary(lm(diff_assessmentBeliefRG_num ~ diff_interventionTestOutcomeRG, df_v4n48_users)) # 0.3979
+
+df_v3v4_expt_matchPred_diffRG_users %>% ggplot(aes(diff_interventionTestOutcomeRG, changeRelativeToOutcome_num)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess)
+
+df_v3v4_expt_matchPred_diffRG_users %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess)
+
+df_v3v4_expt_matchPred_diffRG_users %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess)
+
+df_v3v4_expt_matchPred_diffRG_users %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=lm)
+
+# Takeaway: among those who match predictions, diffRG has no linear relationship to whether you change or not...but it does have the expected quadratic relationship
+# the expected linear finalRG ~ outcomeRG relationship is visually there, but n.s.
+
+```
+
+```{r defining diffRG as a variable that can be plotted}
+
+df_v3n36_v4n48_users$diffRG <- factor(ifelse(df_v3n36_v4n48_users$diff_interventionTestOutcomeRG!=0, "diffRG", "noDiff"))
+
+```
+
+```{r relationship [belief outcome] ~ outcomeRG broken down by match and diffRG}
+
+# consistency
+filter(df_v3n36_v4n48_users, !is.na(outcomeMatchPrediction)) %>% ggplot(aes(diff_interventionTestOutcomeRG, changeRelativeToOutcome_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess) + facet_wrap(vars(outcomeMatchPrediction, diffRG))
+
+# consistency + degree
+filter(df_v3n36_v4n48_users, !is.na(outcomeMatchPrediction)) %>% ggplot(aes(diff_interventionTestOutcomeRG, directionOfChange_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess) + facet_wrap(vars(outcomeMatchPrediction, diffRG))
+
+
+# finalRG
+filter(df_v3n36_v4n48_users, !is.na(outcomeMatchPrediction)) %>% ggplot(aes(diff_interventionTestOutcomeRG, diff_assessmentBeliefRG_num, fill=condition, color=condition)) + geom_jitter(width=.1, height=.1) + geom_smooth(method=loess) + facet_wrap(vars(outcomeMatchPrediction, diffRG))
+
+
+
+```
+
+# Investigating how the intervention affects beliefs
+```{r v3n36 how outcomeRG differs by change toward or away}
+means <- summarySE(df_v3n36_users, measurevar="diff_interventionTestOutcomeRG", groupvars=c("condition", "interventionOutcome", "directionOfChange"), na.rm=TRUE, conf.interval=0.95); means
+
+
+means %>% ggplot(aes(directionOfChange, diff_interventionTestOutcomeRG, color=condition, fill=condition)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=diff_interventionTestOutcomeRG-ci, ymax=diff_interventionTestOutcomeRG+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "direction of change", y = "interventionOutcomeRG") + facet_wrap(vars(interventionOutcome))
+
+# huh? in the experimental group, it's the ones with the biggest diffs that are moving away from feedback
+# in the control group, it's the ones with the biggest diffs that are moving toward feedback
+
+```
+
+```{r v4n48 how outcomeRG differs by change toward or away}
+means <- summarySE(df_v4n48_users, measurevar="diff_interventionTestOutcomeRG", groupvars=c("condition", "interventionOutcome", "directionOfChange"), na.rm=TRUE, conf.interval=0.95); means
+
+
+means %>% ggplot(aes(directionOfChange, diff_interventionTestOutcomeRG, color=condition, fill=condition)) + 
+    geom_point(position=position_dodge(.9), stat="identity") + 
+    geom_errorbar(aes(ymin=diff_interventionTestOutcomeRG-ci, ymax=diff_interventionTestOutcomeRG+ci), width=.2, position=position_dodge(.9)) + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    labs(x = "direction of change", y = "interventionOutcomeRG") + facet_wrap(vars(interventionOutcome))
+
+# huh? in the experimental group, it's the ones with the biggest diffs that are moving away from feedback
+# in the control group, it's the ones with the biggest diffs that are moving toward feedback
 
 ```

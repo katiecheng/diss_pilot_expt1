@@ -400,7 +400,7 @@ function processUserInput(userInput){
 var experiment = "",
   /* toggle numTrials for testing*/
   numTrials = 40, // full 40 items
-  /* test intervention with first numTrials items, in case need to re-test people */
+   // test intervention with first numTrials items, in case need to re-test people 
   // numTrials = 10, // testing
   trialDuration = 5000,
   feedbackDuration = 1000, 

@@ -40,6 +40,11 @@ df_belief_change_vars = pd.read_csv(
   'variable_calcs_toImport.csv'
 )
 
+### Read behavior change variables
+df_behavior_change_vars = pd.read_csv(
+  'variable_calcs_behav_toImport.csv'
+)
+
 ### WRANGLE #######################################################################################
 ### Drop items with NaN in itemIndex
 df_items = df_items.dropna(subset=['itemIndex'])
@@ -269,11 +274,22 @@ df_users['assessmentBelief'] = df_users.apply(
   axis=1
 )
 
+df_users['diff_assessmentBehaviorRG_num'] = pd.to_numeric(df_users['howManyRestudy']) - pd.to_numeric(df_users['howManyGenerate'])
+df_users['assessmentBehaviorREG'] = df_users.apply(
+  lambda row: "restudy" if row['diff_assessmentBehaviorRG_num'] >0 else (
+    "generate" if row['diff_assessmentBehaviorRG_num'] <0 else (
+      "equal" if row['diff_assessmentBehaviorRG_num'] ==0 else None)), 
+  axis=1
+)
+
 ### Calculate shift in beliefs
 
 # use manually calculated beliefs
 # reset_index() and set_index() lets you keep the index after merge
 df_users = df_users.reset_index().merge(df_belief_change_vars, how="left").set_index('prolificId')
+
+# use manually calculated behaviors
+df_users = df_users.reset_index().merge(df_behavior_change_vars, how="left").set_index('prolificId')
 
 """
 # Feedback consistent or inconsistent with expectations?
@@ -404,6 +420,12 @@ df_users = df_users[[
   "directionOfChange_num",
   "changeRelativeToOutcome",
   "changeRelativeToOutcome_num",
+  "assessmentBehaviorREG",
+  "outcomeMatchPredictionBehavior",
+  "directionOfChangeBehavior",
+  "directionOfChangeBehavior_num",
+  "changeRelativeToOutcomeBehavior",
+  "changeRelativeToOutcomeBehavior_num",
   "effort",
   "effort_num",
   "comments"
